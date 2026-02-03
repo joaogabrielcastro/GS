@@ -1,0 +1,116 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import dotenv from 'dotenv';
+import { Server } from 'socket.io';
+import { createServer } from 'http';
+import rateLimit from 'express-rate-limit';
+import path from 'path';
+
+// Importar rotas
+import authRoutes from './routes/authRoutes';
+import truckRoutes from './routes/truckRoutes';
+import tireRoutes from './routes/tireRoutes';
+import checklistRoutes from './routes/checklistRoutes';
+import occurrenceRoutes from './routes/occurrenceRoutes';
+
+// Importar middleware
+import { errorHandler } from './middleware/errorHandler';
+import { occurrenceController } from './controllers/occurrenceController';
+
+// Carregar variáveis de ambiente
+dotenv.config();
+
+const app = express();
+const httpServer = createServer(app);
+
+// Configurar Socket.IO para notificações em tempo real
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    credentials: true,
+  },
+});
+
+// Passar Socket.IO para o controller de ocorrências
+occurrenceController.setSocketIO(io);
+
+// Middleware de segurança
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// CORS
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    credentials: true,
+  })
+);
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // limite de 100 requisições por IP
+  message: 'Muitas requisições deste IP, tente novamente mais tarde.',
+});
+
+app.use('/api/', limiter);
+
+// Body parser
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Servir arquivos estáticos (uploads)
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Rotas
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+app.use('/api/auth', authRoutes);
+app.use('/api/trucks', truckRoutes);
+app.use('/api/tires', tireRoutes);
+app.use('/api/checklists', checklistRoutes);
+app.use('/api/occurrences', occurrenceRoutes);
+
+// Socket.IO - Gerenciamento de conexões
+io.on('connection', (socket) => {
+  console.log('Novo cliente conectado:', socket.id);
+
+  // Usuário se junta à sua "sala" pessoal para notificações
+  socket.on('join', (userId: string) => {
+    socket.join(`user_${userId}`);
+    console.log(`Usuário ${userId} entrou na sala`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Cliente desconectado:', socket.id);
+  });
+});
+
+// Middleware de erro (deve ser o último)
+app.use(errorHandler);
+
+// Iniciar servidor
+const PORT = process.env.PORT || 3000;
+
+httpServer.listen(PORT, () => {
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+  console.log(`📡 Socket.IO pronto para conexões`);
+  console.log(`🌐 API: http://localhost:${PORT}/api`);
+  console.log(`💚 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+});
+
+// Tratamento de erros não capturados
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+export { io };

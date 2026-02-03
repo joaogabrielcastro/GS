@@ -1,0 +1,277 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum UserRole {
+  MOTORISTA
+  ADMINISTRADOR
+  FINANCEIRO
+}
+
+enum TruckStatus {
+  ATIVO
+  MANUTENCAO
+  PARADO
+  INATIVO
+}
+
+enum OccurrenceType {
+  PNEU_ESTOURADO
+  PROBLEMA_MECANICO
+  LONA_RASGADA
+  ACIDENTE
+  MANUTENCAO
+  OUTRO
+}
+
+enum OccurrenceStatus {
+  PENDENTE
+  EM_ANALISE
+  APROVADO
+  REJEITADO
+  RESOLVIDO
+}
+
+enum TirePosition {
+  DIANTEIRO_ESQUERDO
+  DIANTEIRO_DIREITO
+  TRASEIRO_ESQUERDO_EXTERNO
+  TRASEIRO_ESQUERDO_INTERNO
+  TRASEIRO_DIREITO_EXTERNO
+  TRASEIRO_DIREITO_INTERNO
+  ESTEPE
+}
+
+enum TireStatus {
+  NOVO
+  BOM
+  DESGASTADO
+  RECAPADO
+  SUBSTITUIDO
+  DESCARTADO
+}
+
+enum TireEventType {
+  INSTALACAO
+  REMOCAO
+  ESTOURO
+  TROCA
+  RECAPAGEM
+  MANUTENCAO
+  DESGASTE
+}
+
+// Models
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String
+  name          String
+  cpf           String?  @unique
+  phone         String?
+  role          UserRole
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  driverTrucks  Truck[]             @relation("DriverTrucks")
+  checklists    DailyChecklist[]
+  occurrences   Occurrence[]
+  notifications NotificationUser[]
+  
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model Truck {
+  id                String      @id @default(uuid())
+  plate             String      @unique
+  model             String
+  brand             String
+  year              Int
+  status            TruckStatus @default(ATIVO)
+  currentDriverId   String?
+  acquisitionDate   DateTime?
+  lastMaintenanceDate DateTime?
+  totalKm           Int         @default(0)
+  notes             String?
+  active            Boolean     @default(true)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Relations
+  currentDriver   User?            @relation("DriverTrucks", fields: [currentDriverId], references: [id])
+  tires           Tire[]
+  checklists      DailyChecklist[]
+  occurrences     Occurrence[]
+  truckHistory    TruckHistory[]
+
+  @@index([plate])
+  @@index([currentDriverId])
+  @@index([status])
+  @@map("trucks")
+}
+
+model Tire {
+  id                String      @id @default(uuid())
+  code              String      @unique
+  brand             String
+  model             String
+  position          TirePosition
+  status            TireStatus  @default(NOVO)
+  installationDate  DateTime    @default(now())
+  initialKm         Int
+  currentKm         Int         @default(0)
+  cost              Decimal     @db.Decimal(10, 2)
+  lifeExpectancyKm  Int?
+  truckId           String
+  active            Boolean     @default(true)
+  notes             String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Relations
+  truck       Truck        @relation(fields: [truckId], references: [id])
+  events      TireEvent[]
+
+  @@index([truckId])
+  @@index([code])
+  @@index([status])
+  @@map("tires")
+}
+
+model TireEvent {
+  id          String        @id @default(uuid())
+  tireId      String
+  eventType   TireEventType
+  description String
+  kmAtEvent   Int
+  cost        Decimal?      @db.Decimal(10, 2)
+  photoUrl    String?
+  createdAt   DateTime      @default(now())
+
+  // Relations
+  tire Tire @relation(fields: [tireId], references: [id])
+
+  @@index([tireId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("tire_events")
+}
+
+model DailyChecklist {
+  id                String   @id @default(uuid())
+  truckId           String
+  driverId          String
+  date              DateTime @default(now())
+  cabinPhotoUrl     String?
+  tiresPhotoUrl     String?
+  canvasPhotoUrl    String?
+  overallCondition  String?
+  notes             String?
+  location          String?
+  latitude          Float?
+  longitude         Float?
+  createdAt         DateTime @default(now())
+
+  // Relations
+  truck  Truck @relation(fields: [truckId], references: [id])
+  driver User  @relation(fields: [driverId], references: [id])
+
+  @@index([truckId])
+  @@index([driverId])
+  @@index([date])
+  @@map("daily_checklists")
+}
+
+model Occurrence {
+  id              String           @id @default(uuid())
+  type            OccurrenceType
+  status          OccurrenceStatus @default(PENDENTE)
+  description     String
+  truckId         String
+  driverId        String
+  location        String?
+  latitude        Float?
+  longitude       Float?
+  photoUrls       String[]
+  estimatedCost   Decimal?         @db.Decimal(10, 2)
+  actualCost      Decimal?         @db.Decimal(10, 2)
+  hasFinalcialImpact Boolean       @default(false)
+  resolutionNotes String?
+  occurredAt      DateTime         @default(now())
+  resolvedAt      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // Relations
+  truck         Truck          @relation(fields: [truckId], references: [id])
+  driver        User           @relation(fields: [driverId], references: [id])
+  notifications Notification[]
+
+  @@index([truckId])
+  @@index([driverId])
+  @@index([status])
+  @@index([type])
+  @@index([occurredAt])
+  @@map("occurrences")
+}
+
+model Notification {
+  id           String   @id @default(uuid())
+  title        String
+  message      String
+  occurrenceId String?
+  createdAt    DateTime @default(now())
+
+  // Relations
+  occurrence Occurrence?        @relation(fields: [occurrenceId], references: [id])
+  users      NotificationUser[]
+
+  @@index([occurrenceId])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model NotificationUser {
+  id             String    @id @default(uuid())
+  notificationId String
+  userId         String
+  read           Boolean   @default(false)
+  readAt         DateTime?
+
+  // Relations
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@unique([notificationId, userId])
+  @@index([userId, read])
+  @@map("notification_users")
+}
+
+model TruckHistory {
+  id          String   @id @default(uuid())
+  truckId     String
+  driverId    String?
+  action      String
+  description String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  truck Truck @relation(fields: [truckId], references: [id])
+
+  @@index([truckId])
+  @@index([createdAt])
+  @@map("truck_history")
+}
