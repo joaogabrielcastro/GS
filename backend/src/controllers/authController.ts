@@ -132,8 +132,8 @@ export const authController = {
 
       const newToken = jwt.sign(
         { id: user.id, email: user.email, role: user.role },
-        process.env.JWT_SECRET!,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
+        process.env.JWT_SECRET as string,
+        { expiresIn: (process.env.JWT_EXPIRES_IN as string) || '1h' }
       );
 
       res.json({ token: newToken });

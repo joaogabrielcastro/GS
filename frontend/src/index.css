@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-white text-gs-black;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-gs-orange-500 hover:bg-gs-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+
+  .btn-secondary {
+    @apply bg-gs-black hover:bg-gs-black-light text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+
+  .btn-outline {
+    @apply border-2 border-gs-orange-500 text-gs-orange-500 hover:bg-gs-orange-500 hover:text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+}

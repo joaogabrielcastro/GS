@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User, AuthResponse } from '@/types';
 import api from '@/services/api';
 import socketService from '@/services/socket';
@@ -30,6 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadStoredData = () => {
@@ -71,6 +73,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       socketService.connect(user.id);
 
       toast.success(`Bem-vindo, ${user.name}!`);
+      
+      // Redirecionar com base no cargo
+      if (user.role === 'MOTORISTA') {
+        navigate('/motorista');
+      } else if (user.role === 'ADMINISTRADOR') {
+        navigate('/admin');
+      } else if (user.role === 'FINANCEIRO') {
+        navigate('/financeiro');
+      } else {
+        navigate('/');
+      }
     } catch (error: any) {
       const message = error.response?.data?.error || 'Erro ao fazer login';
       toast.error(message);
@@ -90,6 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     socketService.disconnect();
 
     toast.success('Logout realizado com sucesso');
+    navigate('/login');
   };
 
   const register = async (data: RegisterData) => {
