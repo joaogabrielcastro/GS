@@ -1,21 +1,21 @@
-import { io, Socket } from 'socket.io-client';
+import { io, Socket } from "socket.io-client";
 
 class SocketService {
   private socket: Socket | null = null;
 
   connect(userId: string) {
     if (!this.socket) {
-      this.socket = io('http://localhost:3005', {
-        transports: ['websocket'],
+      this.socket = io("http://localhost:3005", {
+        transports: ["websocket"],
       });
 
-      this.socket.on('connect', () => {
-        console.log('Socket conectado');
-        this.socket?.emit('join', userId);
+      this.socket.on("connect", () => {
+        console.log("Socket conectado");
+        this.socket?.emit("join", userId);
       });
 
-      this.socket.on('disconnect', () => {
-        console.log('Socket desconectado');
+      this.socket.on("disconnect", () => {
+        console.log("Socket desconectado");
       });
     }
 

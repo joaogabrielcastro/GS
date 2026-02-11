@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { User, AuthResponse } from '@/types';
-import api from '@/services/api';
-import socketService from '@/services/socket';
-import toast from 'react-hot-toast';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { User, AuthResponse } from "@/types";
+import api from "@/services/api";
+import socketService from "@/services/socket";
+import toast from "react-hot-toast";
 
 interface AuthContextData {
   user: User | null;
@@ -35,14 +35,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     const loadStoredData = () => {
-      const storedToken = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
+      const storedToken = localStorage.getItem("token");
+      const storedUser = localStorage.getItem("user");
 
       if (storedToken && storedUser) {
         setToken(storedToken);
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-        
+
         // Conectar ao Socket.IO
         socketService.connect(parsedUser.id);
       }
@@ -55,16 +55,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await api.post<AuthResponse>('/auth/login', {
+      const response = await api.post<AuthResponse>("/auth/login", {
         email,
         password,
       });
 
       const { token, refreshToken, user } = response.data;
 
-      localStorage.setItem('token', token);
-      localStorage.setItem('refreshToken', refreshToken);
-      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem("token", token);
+      localStorage.setItem("refreshToken", refreshToken);
+      localStorage.setItem("user", JSON.stringify(user));
 
       setToken(token);
       setUser(user);
@@ -73,28 +73,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       socketService.connect(user.id);
 
       toast.success(`Bem-vindo, ${user.name}!`);
-      
+
       // Redirecionar com base no cargo
-      if (user.role === 'MOTORISTA') {
-        navigate('/motorista');
-      } else if (user.role === 'ADMINISTRADOR') {
-        navigate('/admin');
-      } else if (user.role === 'FINANCEIRO') {
-        navigate('/financeiro');
+      if (user.role === "MOTORISTA") {
+        navigate("/motorista");
+      } else if (user.role === "ADMINISTRADOR") {
+        navigate("/admin");
+      } else if (user.role === "FINANCEIRO") {
+        navigate("/financeiro");
       } else {
-        navigate('/');
+        navigate("/");
       }
     } catch (error: any) {
-      const message = error.response?.data?.error || 'Erro ao fazer login';
+      const message = error.response?.data?.error || "Erro ao fazer login";
       toast.error(message);
       throw error;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
+    localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("user");
 
     setToken(null);
     setUser(null);
@@ -102,16 +102,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // Desconectar do Socket.IO
     socketService.disconnect();
 
-    toast.success('Logout realizado com sucesso');
-    navigate('/login');
+    toast.success("Logout realizado com sucesso");
+    navigate("/login");
   };
 
   const register = async (data: RegisterData) => {
     try {
-      await api.post('/auth/register', data);
-      toast.success('Usuário cadastrado com sucesso! Faça login.');
+      await api.post("/auth/register", data);
+      toast.success("Usuário cadastrado com sucesso! Faça login.");
     } catch (error: any) {
-      const message = error.response?.data?.error || 'Erro ao cadastrar usuário';
+      const message =
+        error.response?.data?.error || "Erro ao cadastrar usuário";
       toast.error(message);
       throw error;
     }
@@ -136,7 +137,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+    throw new Error("useAuth deve ser usado dentro de um AuthProvider");
   }
   return context;
 };

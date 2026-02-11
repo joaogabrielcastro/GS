@@ -8,7 +8,8 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import LoginPage from "@/pages/LoginPage";
 import DashboardMotorista from "@/pages/DashboardMotorista";
 import DashboardAdmin from "@/pages/DashboardAdmin";
-import DashboardFinanceiro from "@/pages/DashboardFinanceiro";import TestAuth from '@/pages/TestAuth';
+import DashboardFinanceiro from "@/pages/DashboardFinanceiro";
+import TestAuth from "@/pages/TestAuth";
 // Componente de rota protegida
 const ProtectedRoute: React.FC<{
   children: React.ReactNode;
@@ -57,7 +58,7 @@ const RoleBasedRedirect: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  console.log('User role:', user.role); // Debug
+  console.log("User role:", user.role); // Debug
 
   switch (user.role) {
     case "MOTORISTA":
