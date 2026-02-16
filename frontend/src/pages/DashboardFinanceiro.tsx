@@ -1,264 +1,210 @@
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { 
-  LogOut, 
-  DollarSign, 
+import React, { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { dashboardService } from "@/services/dashboardService";
+import {
+  LogOut,
+  DollarSign,
   TrendingDown,
   TrendingUp,
   FileText,
   Download,
   Bell,
-  Calendar
-} from 'lucide-react';
+  Calendar,
+  AlertTriangle,
+  Truck,
+} from "lucide-react";
+import { toast } from "react-hot-toast";
 
 const DashboardFinanceiro: React.FC = () => {
   const { user, logout } = useAuth();
-  const [periodo, setPeriodo] = useState('mes');
+  const [periodo, setPeriodo] = useState("mes");
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const data = await dashboardService.getFinancialStats(periodo);
+        setStats(data);
+      } catch (error) {
+        console.error("Erro ao carregar financeiro:", error);
+        toast.error("Erro ao carregar dados financeiros");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, [periodo]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-10">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
                 Painel Financeiro
               </h1>
-              <p className="text-sm text-gray-600">Olá, {user?.name}</p>
+              <p className="text-sm text-gray-600">
+                Controle de custos e manutenção
+              </p>
             </div>
 
             <div className="flex items-center gap-4">
-              <select
-                value={periodo}
-                onChange={(e) => setPeriodo(e.target.value)}
-                className="input py-2 text-sm"
-              >
-                <option value="hoje">Hoje</option>
-                <option value="semana">Esta Semana</option>
-                <option value="mes">Este Mês</option>
-                <option value="ano">Este Ano</option>
-                <option value="customizado">Personalizado</option>
-              </select>
-
-              <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-full">
-                <Bell className="w-6 h-6" />
-              </button>
+              <div className="bg-white border rounded-lg flex items-center px-2">
+                <Calendar className="w-4 h-4 text-gray-500 mr-2" />
+                <select
+                  value={periodo}
+                  onChange={(e) => setPeriodo(e.target.value)}
+                  className="py-2 text-sm bg-transparent border-none focus:ring-0 text-gray-700 outline-none"
+                >
+                  <option value="mes">Este Mês</option>
+                  <option value="ano">Este Ano</option>
+                  <option value="total">Total</option>
+                </select>
+              </div>
 
               <button
                 onClick={logout}
-                className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                title="Sair"
               >
                 <LogOut className="w-5 h-5" />
-                Sair
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Custos com Pneus</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">R$ 18.450</p>
-                <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
-                  <TrendingUp className="w-4 h-4" />
-                  +12% vs mês anterior
-                </p>
-              </div>
-              <div className="bg-orange-100 p-3 rounded-lg">
-                <DollarSign className="w-8 h-8 text-orange-600" />
-              </div>
-            </div>
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
           </div>
-
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Manutenções</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">R$ 8.920</p>
-                <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
-                  <TrendingDown className="w-4 h-4" />
-                  -5% vs mês anterior
-                </p>
-              </div>
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <DollarSign className="w-8 h-8 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Ocorrências</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">R$ 5.340</p>
-                <p className="text-sm text-gray-500 mt-1">23 ocorrências</p>
-              </div>
-              <div className="bg-red-100 p-3 rounded-lg">
-                <DollarSign className="w-8 h-8 text-red-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total do Período</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">R$ 32.710</p>
-                <p className="text-sm text-gray-500 mt-1">Janeiro 2026</p>
-              </div>
-              <div className="bg-green-100 p-3 rounded-lg">
-                <DollarSign className="w-8 h-8 text-green-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Análise de Custos com Pneus - DESTAQUE */}
-        <div className="card mb-8 border-2 border-orange-300">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="bg-orange-100 p-3 rounded-lg">
-              <TrendingUp className="w-8 h-8 text-orange-600" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-gray-900">
-                🛞 Análise Detalhada de Pneus
-              </h3>
-              <p className="text-sm text-gray-600">
-                Foco principal do sistema - Controle e economia
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-lg">
-              <p className="text-sm text-gray-700 font-medium">Custo Total com Pneus</p>
-              <p className="text-4xl font-bold text-orange-600 mt-2">R$ 72.450</p>
-              <p className="text-sm text-gray-600 mt-2">48 pneus ativos</p>
-            </div>
-
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg">
-              <p className="text-sm text-gray-700 font-medium">Custo Médio por Pneu</p>
-              <p className="text-4xl font-bold text-blue-600 mt-2">R$ 1.509</p>
-              <p className="text-sm text-gray-600 mt-2">Vida útil: 85.000 km</p>
-            </div>
-
-            <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg">
-              <p className="text-sm text-gray-700 font-medium">Economia Potencial</p>
-              <p className="text-4xl font-bold text-green-600 mt-2">R$ 8.230</p>
-              <p className="text-sm text-gray-600 mt-2">Com recapagens</p>
-            </div>
-          </div>
-
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-900 mb-2">💡 Insights e Recomendações</h4>
-            <ul className="space-y-2 text-sm text-gray-700">
-              <li>• 5 pneus estão próximos do fim da vida útil - planeje substituição</li>
-              <li>• Pneu #PN-023 teve 3 eventos nos últimos 30 dias - avaliar qualidade</li>
-              <li>• Custo/km está 12% acima da média do setor - oportunidade de otimização</li>
-              <li>• Recapagem de 8 pneus pode gerar economia de R$ 8.230</li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Custos por Caminhão */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="card">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">
-              📊 Top 5 - Maiores Custos por Caminhão
-            </h3>
-            
-            <div className="space-y-4">
-              {[
-                { placa: 'ABC-1234', custo: 4850, pneus: 3, manutencao: 1500 },
-                { placa: 'DEF-5678', custo: 4320, pneus: 2, manutencao: 2100 },
-                { placa: 'GHI-9012', custo: 3980, pneus: 4, manutencao: 800 },
-                { placa: 'JKL-3456', custo: 3750, pneus: 2, manutencao: 1200 },
-                { placa: 'MNO-7890', custo: 3450, pneus: 3, manutencao: 950 },
-              ].map((truck, idx) => (
-                <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-semibold text-gray-900">{truck.placa}</p>
-                    <p className="text-sm text-gray-600">
-                      Pneus: R$ {truck.pneus.toLocaleString()} | Manutenção: R$ {truck.manutencao.toLocaleString()}
-                    </p>
-                  </div>
-                  <p className="text-xl font-bold text-orange-600">
-                    R$ {truck.custo.toLocaleString()}
+        ) : stats ? (
+          <>
+            {/* Cards Resumo */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Custo Manutenção
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900 mt-2">
+                    R${" "}
+                    {stats.totalMaintenance.toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                    })}
                   </p>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="card">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">
-              🚨 Ocorrências com Impacto Financeiro
-            </h3>
-            
-            <div className="space-y-4">
-              <div className="border-l-4 border-red-500 pl-4 py-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-semibold text-gray-900">Pneu Estourado</p>
-                    <p className="text-sm text-gray-600">ABC-1234 - Há 2 dias</p>
-                  </div>
-                  <p className="text-lg font-bold text-red-600">R$ 1.520</p>
+                <div className="p-3 bg-red-100 rounded-xl text-red-600">
+                  <AlertTriangle className="w-8 h-8" />
                 </div>
               </div>
-
-              <div className="border-l-4 border-yellow-500 pl-4 py-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-semibold text-gray-900">Problema Mecânico</p>
-                    <p className="text-sm text-gray-600">DEF-5678 - Há 5 dias</p>
-                  </div>
-                  <p className="text-lg font-bold text-yellow-600">R$ 2.100</p>
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Custo Pneus
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900 mt-2">
+                    R${" "}
+                    {stats.totalTire.toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+                <div className="p-3 bg-orange-100 rounded-xl text-orange-600">
+                  <TrendingDown className="w-8 h-8" />
                 </div>
               </div>
-
-              <div className="border-l-4 border-orange-500 pl-4 py-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-semibold text-gray-900">Lona Rasgada</p>
-                    <p className="text-sm text-gray-600">XYZ-9876 - Há 1 semana</p>
-                  </div>
-                  <p className="text-lg font-bold text-orange-600">R$ 850</p>
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Custo Total
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900 mt-2">
+                    R${" "}
+                    {stats.totalCost.toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+                <div className="p-3 bg-green-100 rounded-xl text-green-600">
+                  <DollarSign className="w-8 h-8" />
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Exportar Relatórios */}
-        <div className="card">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
-            📄 Exportar Relatórios
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="flex items-center justify-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all">
-              <Download className="w-5 h-5 text-primary-600" />
-              <span className="font-medium">Relatório de Pneus (PDF)</span>
-            </button>
-
-            <button className="flex items-center justify-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all">
-              <FileText className="w-5 h-5 text-green-600" />
-              <span className="font-medium">Custos Gerais (Excel)</span>
-            </button>
-
-            <button className="flex items-center justify-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
-              <Calendar className="w-5 h-5 text-blue-600" />
-              <span className="font-medium">Relatório Mensal (PDF)</span>
-            </button>
-          </div>
-        </div>
+            {/* Veículos mais custosos */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Truck className="w-5 h-5 text-gray-500" />
+                  Veículos com Maior Custo
+                </h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                        Caminhão
+                      </th>
+                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                        Modelo
+                      </th>
+                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                        KM Rodado
+                      </th>
+                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                        Custo Total
+                      </th>
+                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">
+                        Custo/KM
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {stats.topCostTrucks.map((truck: any, index: number) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 font-medium text-gray-900">
+                          {truck.plate}
+                        </td>
+                        <td className="px-6 py-4 text-gray-600">
+                          {truck.model}
+                        </td>
+                        <td className="px-6 py-4 text-gray-600">
+                          {truck.km.toLocaleString()} km
+                        </td>
+                        <td className="px-6 py-4 font-bold text-red-600">
+                          R${" "}
+                          {truck.totalCost.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </td>
+                        <td className="px-6 py-4 text-gray-600">
+                          R$ {truck.costPerKm}
+                        </td>
+                      </tr>
+                    ))}
+                    {stats.topCostTrucks.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="px-6 py-8 text-center text-gray-500"
+                        >
+                          Nenhum dado financeiro encontrado para este período.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        ) : null}
       </main>
     </div>
   );

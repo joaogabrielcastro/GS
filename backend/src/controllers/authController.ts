@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 
@@ -13,7 +13,7 @@ export const authController = {
 
       // Validação básica
       if (!email || !password || !name || !role) {
-        return res.status(400).json({ error: 'Campos obrigatórios faltando' });
+        return res.status(400).json({ error: "Campos obrigatórios faltando" });
       }
 
       // Verificar se usuário já existe
@@ -22,7 +22,7 @@ export const authController = {
       });
 
       if (existingUser) {
-        return res.status(409).json({ error: 'Email já cadastrado' });
+        return res.status(409).json({ error: "Email já cadastrado" });
       }
 
       // Hash da senha
@@ -47,20 +47,72 @@ export const authController = {
         },
       });
 
-      res.status(201).json({ message: 'Usuário criado com sucesso', user });
+      return res
+        .status(201)
+        .json({ message: "Usuário criado com sucesso", user });
     } catch (error) {
-      console.error('Erro no registro:', error);
-      res.status(500).json({ error: 'Erro ao criar usuário' });
+      console.error("Erro no registro:", error);
+      return res.status(500).json({ error: "Erro ao criar usuário" });
     }
   },
+  // Criar usuário (Admin)
+  async createUser(req: Request, res: Response) {
+    try {
+      const { email, password, name, cpf, phone, role } = req.body;
 
+      // Validação básica
+      if (!email || !password || !name || !role) {
+        return res.status(400).json({ error: "Campos obrigatórios faltando" });
+      }
+
+      // Verificar se usuário já existe
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (existingUser) {
+        return res.status(409).json({ error: "Email já cadastrado" });
+      }
+
+      // Hash da senha
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Criar usuário
+      const user = await prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          name,
+          cpf,
+          phone,
+          role,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          createdAt: true,
+        },
+      });
+
+      return res
+        .status(201)
+        .json({ message: "Usuário criado com sucesso", user });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Erro ao criar usuário" });
+    }
+  },
   // Login
   async login(req: Request, res: Response) {
     try {
       const { email, password } = req.body;
 
       if (!email || !password) {
-        return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+        return res
+          .status(400)
+          .json({ error: "Email e senha são obrigatórios" });
       }
 
       // Buscar usuário
@@ -69,30 +121,32 @@ export const authController = {
       });
 
       if (!user || !user.active) {
-        return res.status(401).json({ error: 'Credenciais inválidas' });
+        return res.status(401).json({ error: "Credenciais inválidas" });
       }
 
       // Verificar senha
       const validPassword = await bcrypt.compare(password, user.password);
 
       if (!validPassword) {
-        return res.status(401).json({ error: 'Credenciais inválidas' });
+        return res.status(401).json({ error: "Credenciais inválidas" });
       }
 
       // Gerar tokens
       const token = jwt.sign(
         { id: user.id, email: user.email, role: user.role },
-        process.env.JWT_SECRET!,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
+        process.env.JWT_SECRET as string,
+        { expiresIn: (process.env.JWT_EXPIRES_IN || "1h") as any },
       );
 
       const refreshToken = jwt.sign(
         { id: user.id },
-        process.env.JWT_REFRESH_SECRET!,
-        { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' }
+        process.env.JWT_REFRESH_SECRET as string,
+        {
+          expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || "7d") as any,
+        },
       );
 
-      res.json({
+      return res.json({
         token,
         refreshToken,
         user: {
@@ -103,8 +157,8 @@ export const authController = {
         },
       });
     } catch (error) {
-      console.error('Erro no login:', error);
-      res.status(500).json({ error: 'Erro ao fazer login' });
+      console.error("Erro no login:", error);
+      return res.status(500).json({ error: "Erro ao fazer login" });
     }
   },
 
@@ -114,12 +168,12 @@ export const authController = {
       const { refreshToken } = req.body;
 
       if (!refreshToken) {
-        return res.status(401).json({ error: 'Refresh token não fornecido' });
+        return res.status(401).json({ error: "Refresh token não fornecido" });
       }
 
       const decoded = jwt.verify(
         refreshToken,
-        process.env.JWT_REFRESH_SECRET!
+        process.env.JWT_REFRESH_SECRET!,
       ) as { id: string };
 
       const user = await prisma.user.findUnique({
@@ -127,18 +181,18 @@ export const authController = {
       });
 
       if (!user || !user.active) {
-        return res.status(401).json({ error: 'Usuário inválido' });
+        return res.status(401).json({ error: "Usuário inválido" });
       }
 
       const newToken = jwt.sign(
         { id: user.id, email: user.email, role: user.role },
         process.env.JWT_SECRET as string,
-        { expiresIn: (process.env.JWT_EXPIRES_IN as string) || '1h' }
+        { expiresIn: (process.env.JWT_EXPIRES_IN || "1h") as any },
       );
 
-      res.json({ token: newToken });
+      return res.json({ token: newToken });
     } catch (error) {
-      res.status(401).json({ error: 'Refresh token inválido' });
+      return res.status(401).json({ error: "Refresh token inválido" });
     }
   },
 
@@ -162,12 +216,12 @@ export const authController = {
       });
 
       if (!user) {
-        return res.status(404).json({ error: 'Usuário não encontrado' });
+        return res.status(404).json({ error: "Usuário não encontrado" });
       }
 
-      res.json(user);
+      return res.json(user);
     } catch (error) {
-      res.status(500).json({ error: 'Erro ao buscar perfil' });
+      return res.status(500).json({ error: "Erro ao buscar perfil" });
     }
   },
 
@@ -190,11 +244,11 @@ export const authController = {
 
         const validPassword = await bcrypt.compare(
           currentPassword,
-          user!.password
+          user!.password,
         );
 
         if (!validPassword) {
-          return res.status(400).json({ error: 'Senha atual incorreta' });
+          return res.status(400).json({ error: "Senha atual incorreta" });
         }
 
         updateData.password = await bcrypt.hash(newPassword, 10);
@@ -212,9 +266,39 @@ export const authController = {
         },
       });
 
-      res.json({ message: 'Perfil atualizado com sucesso', user: updatedUser });
+      return res.json({
+        message: "Perfil atualizado com sucesso",
+        user: updatedUser,
+      });
     } catch (error) {
-      res.status(500).json({ error: 'Erro ao atualizar perfil' });
+      return res.status(500).json({ error: "Erro ao atualizar perfil" });
+    }
+  },
+
+  // Listar usuários (Admin)
+  async list(req: Request, res: Response) {
+    try {
+      const { role } = req.query;
+      const where: any = {};
+      if (role) where.role = role as any;
+
+      const users = await prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          active: true,
+          phone: true,
+          cpf: true,
+          createdAt: true,
+        },
+        orderBy: { name: "asc" },
+      });
+      return res.json(users);
+    } catch (error) {
+      return res.status(500).json({ error: "Erro ao listar usuários" });
     }
   },
 };

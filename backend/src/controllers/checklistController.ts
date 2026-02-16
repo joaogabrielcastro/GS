@@ -1,5 +1,5 @@
-import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -14,11 +14,14 @@ export const checklistController = {
         tiresPhotoUrl,
         canvasPhotoUrl,
         overallCondition,
+        tiresCondition,
+        cabinCondition,
+        canvasCondition,
         notes,
         location,
         latitude,
         longitude,
-      } = req.body;
+      } = req.body; // Receive new fields
 
       // Verificar se o caminhão existe
       const truck = await prisma.truck.findUnique({
@@ -26,7 +29,7 @@ export const checklistController = {
       });
 
       if (!truck) {
-        return res.status(404).json({ error: 'Caminhão não encontrado' });
+        return res.status(404).json({ error: "Caminhão não encontrado" });
       }
 
       // Verificar se já existe checklist hoje
@@ -45,7 +48,7 @@ export const checklistController = {
 
       if (existingChecklist) {
         return res.status(409).json({
-          error: 'Checklist já foi preenchido hoje para este caminhão',
+          error: "Checklist já foi preenchido hoje para este caminhão",
         });
       }
 
@@ -57,6 +60,9 @@ export const checklistController = {
           tiresPhotoUrl,
           canvasPhotoUrl,
           overallCondition,
+          tiresCondition,
+          cabinCondition,
+          canvasCondition,
           notes,
           location,
           latitude,
@@ -64,13 +70,44 @@ export const checklistController = {
         },
       });
 
-      res.status(201).json({
-        message: 'Checklist criado com sucesso',
+      // Se houver algum problema, criar uma notificação para os admins
+      const hasIssues =
+        tiresCondition === "RUIM" ||
+        cabinCondition === "RUIM" ||
+        canvasCondition === "RASGADO" ||
+        overallCondition === "RUIM";
+
+      if (hasIssues) {
+        // Buscar todos os admins
+        const admins = await prisma.user.findMany({
+          where: { role: "ADMINISTRADOR" },
+        });
+
+        // Criar notificação
+        const notification = await prisma.notification.create({
+          data: {
+            title: "Alerta de Checklist ⚠️",
+            message: `Problemas reportados no caminhão ${truck.plate} pelo motorista.`,
+            occurrenceId: undefined, // Opcional
+          },
+        });
+
+        // Vincular notificação aos admins
+        await prisma.notificationUser.createMany({
+          data: admins.map((admin) => ({
+            notificationId: notification.id,
+            userId: admin.id,
+          })),
+        });
+      }
+
+      return res.status(201).json({
+        message: "Checklist criado com sucesso",
         checklist,
       });
     } catch (error) {
-      console.error('Erro ao criar checklist:', error);
-      res.status(500).json({ error: 'Erro ao criar checklist' });
+      console.error("Erro ao criar checklist:", error);
+      return res.status(500).json({ error: "Erro ao criar checklist" });
     }
   },
 
@@ -84,7 +121,7 @@ export const checklistController = {
       const where: any = {};
 
       // Motorista só vê seus próprios checklists
-      if (userRole === 'MOTORISTA') {
+      if (userRole === "MOTORISTA") {
         where.driverId = userId;
       } else {
         if (driverId) where.driverId = driverId;
@@ -116,12 +153,12 @@ export const checklistController = {
             },
           },
         },
-        orderBy: { date: 'desc' },
+        orderBy: { date: "desc" },
       });
 
-      res.json(checklists);
+      return res.json(checklists);
     } catch (error) {
-      res.status(500).json({ error: 'Erro ao listar checklists' });
+      return res.status(500).json({ error: "Erro ao listar checklists" });
     }
   },
 
@@ -146,12 +183,12 @@ export const checklistController = {
       });
 
       if (!checklist) {
-        return res.status(404).json({ error: 'Checklist não encontrado' });
+        return res.status(404).json({ error: "Checklist não encontrado" });
       }
 
-      res.json(checklist);
+      return res.json(checklist);
     } catch (error) {
-      res.status(500).json({ error: 'Erro ao buscar checklist' });
+      return res.status(500).json({ error: "Erro ao buscar checklist" });
     }
   },
 
@@ -174,10 +211,10 @@ export const checklistController = {
         photoUrls.canvasPhotoUrl = `/uploads/checklist/${files.canvasPhoto[0].filename}`;
       }
 
-      res.json({ message: 'Fotos enviadas com sucesso', photoUrls });
+      return res.json({ message: "Fotos enviadas com sucesso", photoUrls });
     } catch (error) {
-      console.error('Erro no upload:', error);
-      res.status(500).json({ error: 'Erro ao fazer upload das fotos' });
+      console.error("Erro no upload:", error);
+      return res.status(500).json({ error: "Erro ao fazer upload das fotos" });
     }
   },
 };

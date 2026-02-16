@@ -6,9 +6,12 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
 // Páginas
 import LoginPage from "@/pages/LoginPage";
+import RegisterPage from "@/pages/RegisterPage";
 import DashboardMotorista from "@/pages/DashboardMotorista";
 import DashboardAdmin from "@/pages/DashboardAdmin";
 import DashboardFinanceiro from "@/pages/DashboardFinanceiro";
+import ChecklistPage from "@/pages/ChecklistPage";
+import ReportIssuePage from "@/pages/ReportIssuePage";
 import TestAuth from "@/pages/TestAuth";
 // Componente de rota protegida
 const ProtectedRoute: React.FC<{
@@ -88,6 +91,7 @@ function App() {
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
             <Route path="/test" element={<TestAuth />} />
 
             <Route
@@ -95,6 +99,24 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["MOTORISTA"]}>
                   <DashboardMotorista />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/checklist/novo"
+              element={
+                <ProtectedRoute allowedRoles={["MOTORISTA"]}>
+                  <ChecklistPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/ocorrencias/nova"
+              element={
+                <ProtectedRoute allowedRoles={["MOTORISTA"]}>
+                  <ReportIssuePage />
                 </ProtectedRoute>
               }
             />

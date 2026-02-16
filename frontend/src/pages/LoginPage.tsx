@@ -31,6 +31,10 @@ const LoginPage: React.FC = () => {
             <Logo size="lg" />
           </div>
 
+          <h2 className="text-center text-2xl font-bold text-gray-900 mb-6">
+            Acesso ao Sistema
+          </h2>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label
@@ -79,19 +83,13 @@ const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-600">
-            <p>Perfis de acesso:</p>
-            <div className="mt-2 space-y-1">
-              <p>
-                👤 <strong>Motorista</strong>: Checklist e ocorrências
-              </p>
-              <p>
-                ⚙️ <strong>Administrador</strong>: Gestão completa
-              </p>
-              <p>
-                💰 <strong>Financeiro</strong>: Relatórios e custos
-              </p>
-            </div>
+          <div className="mt-4 text-center">
+            <a
+              href="/register"
+              className="text-sm font-medium text-gs-orange-600 hover:text-gs-orange-500"
+            >
+              Não tem conta? Cadastre-se como Motorista
+            </a>
           </div>
         </div>
 

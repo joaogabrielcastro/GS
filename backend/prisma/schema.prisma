@@ -178,6 +178,9 @@ model DailyChecklist {
   tiresPhotoUrl     String?
   canvasPhotoUrl    String?
   overallCondition  String?
+  tiresCondition    String?
+  cabinCondition    String?
+  canvasCondition   String?
   notes             String?
   location          String?
   latitude          Float?
