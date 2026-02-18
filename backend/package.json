@@ -41,5 +41,6 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-
+    "@types/bcryptjs": "^2.4.6"
+  }
+}

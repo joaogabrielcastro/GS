@@ -73,6 +73,10 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "OK", timestamp: new Date().toISOString() });
 });
 
+app.get("/", (_req, res) => {
+  res.send("API Transportadora rodando 🚀");
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/trucks", truckRoutes);
 app.use("/api/tires", tireRoutes);
