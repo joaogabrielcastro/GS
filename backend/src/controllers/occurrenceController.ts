@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
 import { Server } from 'socket.io';
 
 const prisma = new PrismaClient();
@@ -71,7 +71,7 @@ export const occurrenceController = {
       });
 
       // Se tiver impacto financeiro, notificar também o financeiro
-      const roles = ['ADMINISTRADOR'];
+      const roles: UserRole[] = ['ADMINISTRADOR'];
       if (hasFinalcialImpact) {
         roles.push('FINANCEIRO');
       }
