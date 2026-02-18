@@ -1,6 +1,6 @@
-import { Request, Response } from 'express';
-import { PrismaClient, UserRole } from '@prisma/client';
-import { Server } from 'socket.io';
+import { Request, Response } from "express";
+import { PrismaClient, UserRole } from "@prisma/client";
+import { Server } from "socket.io";
 
 const prisma = new PrismaClient();
 
@@ -33,7 +33,7 @@ export const occurrenceController = {
       });
 
       if (!truck) {
-        return res.status(404).json({ error: 'Caminhão não encontrado' });
+        return res.status(404).json({ error: "Caminhão não encontrado" });
       }
 
       const occurrence = await prisma.occurrence.create({
@@ -67,13 +67,13 @@ export const occurrenceController = {
 
       // Criar notificação para administradores
       const admins = await prisma.user.findMany({
-        where: { role: 'ADMINISTRADOR', active: true },
+        where: { role: "ADMINISTRADOR", active: true },
       });
 
       // Se tiver impacto financeiro, notificar também o financeiro
-      const roles: UserRole[] = ['ADMINISTRADOR'];
+      const roles: UserRole[] = ["ADMINISTRADOR"];
       if (hasFinalcialImpact) {
-        roles.push('FINANCEIRO');
+        roles.push("FINANCEIRO");
       }
 
       const usersToNotify = await prisma.user.findMany({
@@ -102,7 +102,7 @@ export const occurrenceController = {
       // Enviar notificação em tempo real via Socket.IO
       if (this.io) {
         usersToNotify.forEach((user) => {
-          this.io!.to(`user_${user.id}`).emit('newNotification', {
+          this.io!.to(`user_${user.id}`).emit("newNotification", {
             notification,
             occurrence,
           });
@@ -110,12 +110,12 @@ export const occurrenceController = {
       }
 
       res.status(201).json({
-        message: 'Ocorrência registrada com sucesso',
+        message: "Ocorrência registrada com sucesso",
         occurrence,
       });
     } catch (error) {
-      console.error('Erro ao criar ocorrência:', error);
-      res.status(500).json({ error: 'Erro ao registrar ocorrência' });
+      console.error("Erro ao criar ocorrência:", error);
+      res.status(500).json({ error: "Erro ao registrar ocorrência" });
     }
   },
 
@@ -129,7 +129,7 @@ export const occurrenceController = {
       const where: any = {};
 
       // Motorista só vê suas próprias ocorrências
-      if (userRole === 'MOTORISTA') {
+      if (userRole === "MOTORISTA") {
         where.driverId = userId;
       } else {
         if (driverId) where.driverId = driverId;
@@ -163,12 +163,12 @@ export const occurrenceController = {
             },
           },
         },
-        orderBy: { occurredAt: 'desc' },
+        orderBy: { occurredAt: "desc" },
       });
 
       res.json(occurrences);
     } catch (error) {
-      res.status(500).json({ error: 'Erro ao listar ocorrências' });
+      res.status(500).json({ error: "Erro ao listar ocorrências" });
     }
   },
 
@@ -193,12 +193,12 @@ export const occurrenceController = {
       });
 
       if (!occurrence) {
-        return res.status(404).json({ error: 'Ocorrência não encontrada' });
+        return res.status(404).json({ error: "Ocorrência não encontrada" });
       }
 
       res.json(occurrence);
     } catch (error) {
-      res.status(500).json({ error: 'Erro ao buscar ocorrência' });
+      res.status(500).json({ error: "Erro ao buscar ocorrência" });
     }
   },
 
@@ -213,7 +213,7 @@ export const occurrenceController = {
       if (resolutionNotes) updateData.resolutionNotes = resolutionNotes;
       if (actualCost) updateData.actualCost = actualCost;
 
-      if (status === 'RESOLVIDO') {
+      if (status === "RESOLVIDO") {
         updateData.resolvedAt = new Date();
       }
 
@@ -233,7 +233,7 @@ export const occurrenceController = {
       // Notificar o motorista sobre a atualização
       const notification = await prisma.notification.create({
         data: {
-          title: 'Ocorrência Atualizada',
+          title: "Ocorrência Atualizada",
           message: `Sua ocorrência foi atualizada para: ${status}`,
           occurrenceId: id,
           users: {
@@ -245,16 +245,16 @@ export const occurrenceController = {
       });
 
       if (this.io) {
-        this.io.to(`user_${occurrence.driverId}`).emit('newNotification', {
+        this.io.to(`user_${occurrence.driverId}`).emit("newNotification", {
           notification,
           occurrence,
         });
       }
 
-      res.json({ message: 'Ocorrência atualizada com sucesso', occurrence });
+      res.json({ message: "Ocorrência atualizada com sucesso", occurrence });
     } catch (error) {
-      console.error('Erro ao atualizar ocorrência:', error);
-      res.status(500).json({ error: 'Erro ao atualizar ocorrência' });
+      console.error("Erro ao atualizar ocorrência:", error);
+      res.status(500).json({ error: "Erro ao atualizar ocorrência" });
     }
   },
 
@@ -264,17 +264,17 @@ export const occurrenceController = {
       const files = req.files as Express.Multer.File[];
 
       if (!files || files.length === 0) {
-        return res.status(400).json({ error: 'Nenhuma foto enviada' });
+        return res.status(400).json({ error: "Nenhuma foto enviada" });
       }
 
       const photoUrls = files.map(
-        (file) => `/uploads/occurrences/${file.filename}`
+        (file) => `/uploads/occurrences/${file.filename}`,
       );
 
-      res.json({ message: 'Fotos enviadas com sucesso', photoUrls });
+      res.json({ message: "Fotos enviadas com sucesso", photoUrls });
     } catch (error) {
-      console.error('Erro no upload:', error);
-      res.status(500).json({ error: 'Erro ao fazer upload das fotos' });
+      console.error("Erro no upload:", error);
+      res.status(500).json({ error: "Erro ao fazer upload das fotos" });
     }
   },
 
@@ -302,11 +302,11 @@ export const occurrenceController = {
           .length,
         totalEstimatedCost: occurrences.reduce(
           (sum, o) => sum + Number(o.estimatedCost || 0),
-          0
+          0,
         ),
         totalActualCost: occurrences.reduce(
           (sum, o) => sum + Number(o.actualCost || 0),
-          0
+          0,
         ),
       };
 
@@ -318,8 +318,8 @@ export const occurrenceController = {
 
       res.json(stats);
     } catch (error) {
-      console.error('Erro ao calcular estatísticas:', error);
-      res.status(500).json({ error: 'Erro ao calcular estatísticas' });
+      console.error("Erro ao calcular estatísticas:", error);
+      res.status(500).json({ error: "Erro ao calcular estatísticas" });
     }
   },
 };
