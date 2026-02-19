@@ -4,11 +4,12 @@ import { Server } from "socket.io";
 
 const prisma = new PrismaClient();
 
-export const occurrenceController = {
-  io: null as Server | null,
+// Variável de módulo para evitar perda de contexto do 'this'
+let socketIO: Server | null = null;
 
+export const occurrenceController = {
   setSocketIO(io: Server) {
-    this.io = io;
+    socketIO = io;
   },
 
   // Criar ocorrência
@@ -100,9 +101,9 @@ export const occurrenceController = {
       });
 
       // Enviar notificação em tempo real via Socket.IO
-      if (this.io) {
+      if (socketIO) {
         usersToNotify.forEach((user) => {
-          this.io!.to(`user_${user.id}`).emit("newNotification", {
+          socketIO!.to(`user_${user.id}`).emit("newNotification", {
             notification,
             occurrence,
           });
@@ -244,8 +245,8 @@ export const occurrenceController = {
         },
       });
 
-      if (this.io) {
-        this.io.to(`user_${occurrence.driverId}`).emit("newNotification", {
+      if (socketIO) {
+        socketIO.to(`user_${occurrence.driverId}`).emit("newNotification", {
           notification,
           occurrence,
         });

@@ -105,7 +105,10 @@ export const dashboardController = {
       });
     } catch (error) {
       console.error("Erro ao buscar dados do dashboard:", error);
-      res.status(500).json({ error: "Erro ao buscar dados do dashboard" });
+      res.status(500).json({
+        error: "Erro ao buscar dados do dashboard",
+        details: error instanceof Error ? error.message : String(error),
+      });
     }
   },
 

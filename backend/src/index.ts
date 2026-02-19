@@ -29,7 +29,20 @@ const httpServer = createServer(app);
 // Configurar Socket.IO para notificações em tempo real
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Aceitar requisições sem origin (mobile apps, curl, etc)
+      if (!origin) return callback(null, true);
+      // Aceitar qualquer porta localhost ou origins configuradas
+      if (
+        origin.startsWith("http://localhost:") ||
+        origin.startsWith("https://localhost:") ||
+        (process.env.CORS_ORIGIN &&
+          process.env.CORS_ORIGIN.split(",").includes(origin))
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     credentials: true,
   },
 });
@@ -44,10 +57,23 @@ app.use(
   }),
 );
 
-// CORS
+// CORS - aceitar qualquer porta localhost
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Aceitar requisições sem origin
+      if (!origin) return callback(null, true);
+      // Aceitar qualquer porta localhost ou origins configuradas
+      if (
+        origin.startsWith("http://localhost:") ||
+        origin.startsWith("https://localhost:") ||
+        (process.env.CORS_ORIGIN &&
+          process.env.CORS_ORIGIN.split(",").includes(origin))
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     credentials: true,
   }),
 );

@@ -23,8 +23,50 @@ import {
   FileText,
   Disc,
   X,
+  ImageOff,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+
+// URL base da API para imagens
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL?.replace("/api", "") ||
+  "https://gs-production-8afd.up.railway.app";
+
+// Função para construir URL completa de imagens
+const getImageUrl = (path: string | null | undefined): string => {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  return `${API_BASE_URL}${path}`;
+};
+
+// Componente de imagem com fallback para quando não carregar
+const ImageWithFallback: React.FC<{
+  src: string;
+  alt: string;
+  className?: string;
+  onClick?: () => void;
+}> = ({ src, alt, className, onClick }) => {
+  const [error, setError] = useState(false);
+
+  if (error || !src) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-gray-200 text-gray-400">
+        <ImageOff className="w-8 h-8 mb-1" />
+        <span className="text-xs">Imagem indisponível</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      onClick={onClick}
+      onError={() => setError(true)}
+    />
+  );
+};
 
 const DashboardAdmin: React.FC = () => {
   const { user, logout } = useAuth();
@@ -1353,12 +1395,15 @@ const DashboardAdmin: React.FC = () => {
                       Pneus
                     </p>
                     <div className="aspect-video bg-gray-100 rounded overflow-hidden">
-                      <img
-                        src={selectedChecklist.tiresPhotoUrl}
+                      <ImageWithFallback
+                        src={getImageUrl(selectedChecklist.tiresPhotoUrl)}
                         alt="Pneus"
                         className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
                         onClick={() =>
-                          window.open(selectedChecklist.tiresPhotoUrl, "_blank")
+                          window.open(
+                            getImageUrl(selectedChecklist.tiresPhotoUrl),
+                            "_blank",
+                          )
                         }
                       />
                     </div>
@@ -1370,12 +1415,15 @@ const DashboardAdmin: React.FC = () => {
                       Cabine
                     </p>
                     <div className="aspect-video bg-gray-100 rounded overflow-hidden">
-                      <img
-                        src={selectedChecklist.cabinPhotoUrl}
+                      <ImageWithFallback
+                        src={getImageUrl(selectedChecklist.cabinPhotoUrl)}
                         alt="Cabine"
                         className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
                         onClick={() =>
-                          window.open(selectedChecklist.cabinPhotoUrl, "_blank")
+                          window.open(
+                            getImageUrl(selectedChecklist.cabinPhotoUrl),
+                            "_blank",
+                          )
                         }
                       />
                     </div>
@@ -1387,13 +1435,13 @@ const DashboardAdmin: React.FC = () => {
                       Lonas
                     </p>
                     <div className="aspect-video bg-gray-100 rounded overflow-hidden">
-                      <img
-                        src={selectedChecklist.canvasPhotoUrl}
+                      <ImageWithFallback
+                        src={getImageUrl(selectedChecklist.canvasPhotoUrl)}
                         alt="Lonas"
                         className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
                         onClick={() =>
                           window.open(
-                            selectedChecklist.canvasPhotoUrl,
+                            getImageUrl(selectedChecklist.canvasPhotoUrl),
                             "_blank",
                           )
                         }
