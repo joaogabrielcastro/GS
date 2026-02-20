@@ -26,21 +26,25 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 
+// Configurar origens permitidas via env
+const allowedOrigins: string[] = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map((s) => s.trim()).filter(Boolean)
+  : [];
+
+function isOriginAllowed(origin?: string) {
+  if (!origin) return true; // aceitar requisições sem origin (curl, mobile, etc)
+  if (origin.startsWith("http://localhost:") || origin.startsWith("https://localhost:"))
+    return true;
+  if (allowedOrigins.includes(origin)) return true;
+  return false;
+}
+
 // Configurar Socket.IO para notificações em tempo real
 const io = new Server(httpServer, {
   cors: {
     origin: (origin, callback) => {
-      // Aceitar requisições sem origin (mobile apps, curl, etc)
-      if (!origin) return callback(null, true);
-      // Aceitar qualquer porta localhost ou origins configuradas
-      if (
-        origin.startsWith("http://localhost:") ||
-        origin.startsWith("https://localhost:") ||
-        (process.env.CORS_ORIGIN &&
-          process.env.CORS_ORIGIN.split(",").includes(origin))
-      ) {
-        return callback(null, true);
-      }
+      if (isOriginAllowed(origin)) return callback(null, true);
+      console.warn(`CORS denied for origin: ${origin}`);
       return callback(null, false);
     },
     credentials: true,
@@ -61,17 +65,8 @@ app.use(
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Aceitar requisições sem origin
-      if (!origin) return callback(null, true);
-      // Aceitar qualquer porta localhost ou origins configuradas
-      if (
-        origin.startsWith("http://localhost:") ||
-        origin.startsWith("https://localhost:") ||
-        (process.env.CORS_ORIGIN &&
-          process.env.CORS_ORIGIN.split(",").includes(origin))
-      ) {
-        return callback(null, true);
-      }
+      if (isOriginAllowed(origin)) return callback(null, true);
+      console.warn(`CORS denied for origin: ${origin}`);
       return callback(null, false);
     },
     credentials: true,
