@@ -24,17 +24,42 @@ import { occurrenceController } from "./controllers/occurrenceController";
 dotenv.config();
 
 const app = express();
-const httpServer = createServer(app);
+
+// Confiar no proxy (necessário quando o deploy passa cabeçalhos X-Forwarded-For)
+// Plataformas como Railway, Heroku, Vercel, etc. setam esse header.
+// Isso permite que express-rate-limit identifique corretamente o IP do cliente.
+app.set("trust proxy", true);
 
 // Configurar origens permitidas via env
 const allowedOrigins: string[] = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(",").map((s) => s.trim()).filter(Boolean)
+  ? process.env.CORS_ORIGIN.split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
   : [];
+
+// Logar origens permitidas para facilitar depuração no deploy
+if (allowedOrigins.length === 0) {
+  console.log(
+    "CORS: allowedOrigins vazio — apenas localhost e requisições sem origin serão aceitas unless CORS_ORIGIN configured",
+  );
+} else if (allowedOrigins.includes("*")) {
+  console.log(
+    "CORS: wildcard '*' ativo — aceitando todas as origens (reflete Origin no header)",
+  );
+} else {
+  console.log("CORS: allowed origins:", allowedOrigins);
+}
+const httpServer = createServer(app);
 
 function isOriginAllowed(origin?: string) {
   if (!origin) return true; // aceitar requisições sem origin (curl, mobile, etc)
-  if (origin.startsWith("http://localhost:") || origin.startsWith("https://localhost:"))
+  if (
+    origin.startsWith("http://localhost:") ||
+    origin.startsWith("https://localhost:")
+  )
     return true;
+  // Se estiver configurado '*', permitir todas as origens.
+  if (allowedOrigins.includes("*")) return true;
   if (allowedOrigins.includes(origin)) return true;
   return false;
 }
