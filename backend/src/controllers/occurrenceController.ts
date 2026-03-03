@@ -47,8 +47,9 @@ export const occurrenceController = {
           latitude,
           longitude,
           photoUrls: photoUrls || [],
-          estimatedCost,
-          hasFinalcialImpact: hasFinalcialImpact || false,
+          estimatedCost: estimatedCost ?? null,
+          hasFinalcialImpact:
+            estimatedCost != null ? true : hasFinalcialImpact || false,
         },
         include: {
           truck: {

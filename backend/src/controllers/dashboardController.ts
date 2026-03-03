@@ -100,7 +100,12 @@ export const dashboardController = {
           description: `Checklist realizado em ${check.truck.plate}`,
           user: check.driver.name,
           date: check.createdAt,
-          status: check.overallCondition === "BOM" ? "APROVADO" : "REJEITADO",
+          status:
+            check.overallCondition === "BOM"
+              ? "APROVADO"
+              : check.overallCondition === "REGULAR"
+                ? "ATENÇÃO"
+                : "REJEITADO",
         })),
       });
     } catch (error) {

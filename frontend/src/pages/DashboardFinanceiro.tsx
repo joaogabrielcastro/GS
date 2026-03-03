@@ -15,11 +15,66 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
+const periodoLabel: Record<string, string> = {
+  mes: "Este Mês",
+  ano: "Este Ano",
+  total: "Total",
+};
+
 const DashboardFinanceiro: React.FC = () => {
   const { user, logout } = useAuth();
   const [periodo, setPeriodo] = useState("mes");
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleExportCSV = () => {
+    if (!stats) return;
+
+    const label = periodoLabel[periodo] ?? periodo;
+    const now = new Date().toLocaleDateString("pt-BR");
+
+    const rows: string[][] = [
+      ["Relatório Financeiro – " + label, "", "", "", ""],
+      ["Gerado em: " + now, "", "", "", ""],
+      ["", "", "", "", ""],
+      ["Resumo", "", "", "", ""],
+      ["Custo Manutenção (R$)", "Custo Pneus (R$)", "Custo Total (R$)", "", ""],
+      [
+        stats.totalMaintenance.toFixed(2),
+        stats.totalTire.toFixed(2),
+        stats.totalCost.toFixed(2),
+        "",
+        "",
+      ],
+      ["", "", "", "", ""],
+      ["Veículos com Maior Custo", "", "", "", ""],
+      ["Placa", "Modelo", "KM Rodado", "Custo Total (R$)", "Custo/KM (R$)"],
+      ...(stats.topCostTrucks?.map((truck: any) => [
+        truck.plate,
+        truck.model,
+        truck.km.toString(),
+        truck.totalCost.toFixed(2),
+        truck.costPerKm.toString(),
+      ]) ?? []),
+    ];
+
+    const csvContent =
+      "\uFEFF" +
+      rows
+        .map((row) =>
+          row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(";"),
+        )
+        .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `relatorio-financeiro-${periodo}-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("Relatório exportado com sucesso!");
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -65,6 +120,16 @@ const DashboardFinanceiro: React.FC = () => {
                   <option value="total">Total</option>
                 </select>
               </div>
+
+              <button
+                onClick={handleExportCSV}
+                disabled={!stats}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-colors"
+                title="Exportar relatório CSV"
+              >
+                <Download className="w-4 h-4" />
+                Exportar CSV
+              </button>
 
               <button
                 onClick={logout}

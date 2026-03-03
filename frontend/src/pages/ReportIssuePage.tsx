@@ -14,6 +14,7 @@ const ReportIssuePage: React.FC = () => {
   // Form states
   const [type, setType] = useState("OUTRO");
   const [description, setDescription] = useState("");
+  const [estimatedCost, setEstimatedCost] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
 
   useEffect(() => {
@@ -57,6 +58,7 @@ const ReportIssuePage: React.FC = () => {
         type,
         description,
         photoUrls: uploadedUrls,
+        estimatedCost: estimatedCost ? parseFloat(estimatedCost) : undefined,
       });
 
       toast.success("Ocorrência registrada!");
@@ -129,6 +131,29 @@ const ReportIssuePage: React.FC = () => {
         </div>
 
         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Custo Estimado (opcional)
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+              <span className="text-gray-400 text-sm font-medium">R$</span>
+            </div>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={estimatedCost}
+              onChange={(e) => setEstimatedCost(e.target.value)}
+              className="w-full pl-10 p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
+              placeholder="0,00"
+            />
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            Informe o valor aproximado se souber (reparo, reboque, etc.)
+          </p>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
           <label className="block text-sm font-medium text-gray-700 mb-4">
             Evidências (Fotos)
           </label>
@@ -136,6 +161,7 @@ const ReportIssuePage: React.FC = () => {
             type="file"
             multiple
             accept="image/*"
+            capture="environment"
             onChange={handlePhotoAdd}
             className="block w-full text-sm text-gray-500
                         file:mr-4 file:py-2 file:px-4

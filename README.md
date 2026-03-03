@@ -5,11 +5,13 @@ Sistema completo de gestão operacional focado em controle de motoristas, caminh
 ## 🎯 Funcionalidades Principais
 
 ### 👤 Perfis de Usuário
+
 - **Motorista**: Checklist diário, registro de ocorrências, upload de fotos
 - **Administrador**: Painel central, gestão de caminhões e motoristas
 - **Financeiro**: Controle de custos, relatórios e análises
 
 ### 🚛 Módulos
+
 - ✅ Controle diário do motorista (checklist com fotos)
 - 🚨 Registro de ocorrências em tempo real
 - 🔔 Sistema de notificações
@@ -21,6 +23,7 @@ Sistema completo de gestão operacional focado em controle de motoristas, caminh
 ## 🛠️ Stack Tecnológica
 
 ### Backend
+
 - **Node.js** + **Express** + **TypeScript**
 - **PostgreSQL** (banco de dados relacional)
 - **Prisma ORM** (gerenciamento de banco de dados)
@@ -29,6 +32,7 @@ Sistema completo de gestão operacional focado em controle de motoristas, caminh
 - **Socket.io** (notificações em tempo real)
 
 ### Frontend
+
 - **React** + **TypeScript**
 - **Vite** (build tool)
 - **Tailwind CSS** (estilização)
@@ -67,25 +71,28 @@ GS/
 
 ## 🚀 Início Rápido
 
-### Instalação Automática (Windows)
+### Instalação
+
 ```bash
-# 1. Execute o instalador
-install.bat
+# 1. Instale as dependências
+cd backend && npm install
+cd ../frontend && npm install
 
-# 2. Configure o banco de dados PostgreSQL
+# 2. Configure as variáveis de ambiente
+# Copie backend/.env.example → backend/.env e preencha DATABASE_URL, JWT_SECRET, etc.
 
-# 3. Execute as migrations
+# 3. Execute as migrations e o seed
 cd backend
 npx prisma migrate dev
+npx prisma db seed
 
-# 4. Inicie os servidores
-start.bat
+# 4. Inicie os servidores (em terminais separados)
+cd backend && npm run dev
+cd frontend && npm run dev
 ```
 
-### Instalação Manual
-Consulte o guia completo: **[INSTALACAO.md](INSTALACAO.md)**
-
 ### Acesso
+
 - Frontend: http://localhost:5173
 - Backend: http://localhost:3000
 - Prisma Studio: `npx prisma studio`
@@ -93,6 +100,7 @@ Consulte o guia completo: **[INSTALACAO.md](INSTALACAO.md)**
 ## 📊 Modelo de Dados
 
 ### Principais Entidades
+
 - **Users** (Usuários com perfis)
 - **Trucks** (Caminhões)
 - **Tires** (Pneus com histórico completo)
@@ -102,6 +110,7 @@ Consulte o guia completo: **[INSTALACAO.md](INSTALACAO.md)**
 - **Notifications** (Notificações)
 
 ## 🔐 Segurança
+
 - Autenticação JWT com refresh tokens
 - Senhas criptografadas com bcrypt
 - Upload de arquivos com validação
@@ -109,6 +118,7 @@ Consulte o guia completo: **[INSTALACAO.md](INSTALACAO.md)**
 - CORS configurado
 
 ## 📈 Recursos Avançados
+
 - Notificações em tempo real
 - Relatórios exportáveis (PDF/Excel)
 - Histórico imutável de eventos
@@ -117,6 +127,7 @@ Consulte o guia completo: **[INSTALACAO.md](INSTALACAO.md)**
 - Sistema escalável e multi-tenant pronto
 
 ## 🎯 Roadmap
+
 - [ ] Implementação de cache (Redis)
 - [ ] Integração com AWS S3 para fotos
 - [ ] App mobile nativo (React Native)
@@ -125,19 +136,18 @@ Consulte o guia completo: **[INSTALACAO.md](INSTALACAO.md)**
 - [ ] API de integração para terceiros
 
 ## 📝 Licença
+
 Proprietary - Sistema comercializável como SaaS
 
 ## 📚 Documentação Completa
 
-- **[INICIO_RAPIDO.md](INICIO_RAPIDO.md)** - Guia rápido de 5 minutos
-- **[INSTALACAO.md](INSTALACAO.md)** - Instruções detalhadas de instalação
 - **[API_EXAMPLES.md](API_EXAMPLES.md)** - Exemplos práticos de uso da API
 - **[RESUMO_EXECUTIVO.md](RESUMO_EXECUTIVO.md)** - Visão completa do projeto
-- **[CHECKLIST.md](CHECKLIST.md)** - Status de desenvolvimento
 
 ## 🎯 Principais Recursos
 
 ### 🛞 Controle de Pneus (Diferencial)
+
 - Cadastro individual com código único
 - Histórico completo de eventos
 - Cálculo automático de custo/km
@@ -145,19 +155,23 @@ Proprietary - Sistema comercializável como SaaS
 - Análise de ROI e economia
 
 ### 📱 Dashboards por Perfil
+
 - **Motorista**: Checklist diário e ocorrências
 - **Administrador**: Visão 360° da operação
 - **Financeiro**: Relatórios e análise de custos
 
 ### 🔔 Notificações em Tempo Real
+
 - Socket.IO para comunicação instantânea
 - Alertas automáticos por perfil
 - Histórico de notificações
 
 ### 📊 Relatórios e Análises
+
 - Estatísticas de pneus
 - Custos por caminhão/motorista
 - Exportação de dados
 
 ---
+
 Desenvolvido para otimizar gestão de transportadoras com foco em economia e controle operacional.

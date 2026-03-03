@@ -485,7 +485,13 @@ const DashboardAdmin: React.FC = () => {
                                 </p>
                               </div>
                               <span
-                                className={`text-xs font-bold px-2 py-1 rounded-full ${check.status === "APROVADO" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                                className={`text-xs font-bold px-2 py-1 rounded-full ${
+                                  check.status === "APROVADO"
+                                    ? "bg-green-100 text-green-700"
+                                    : check.status === "ATENÇÃO"
+                                      ? "bg-yellow-100 text-yellow-700"
+                                      : "bg-red-100 text-red-700"
+                                }`}
                               >
                                 {check.status}
                               </span>
@@ -1207,6 +1213,20 @@ const DashboardAdmin: React.FC = () => {
                   {selectedOccurrence.location || "Não informada"}
                 </p>
               </div>
+              {selectedOccurrence.estimatedCost != null && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <p className="text-sm text-yellow-700 font-medium">
+                    Custo estimado pelo motorista
+                  </p>
+                  <p className="text-lg font-bold text-yellow-800">
+                    R${" "}
+                    {Number(selectedOccurrence.estimatedCost).toLocaleString(
+                      "pt-BR",
+                      { minimumFractionDigits: 2 },
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Status Update Section */}
@@ -1235,7 +1255,11 @@ const DashboardAdmin: React.FC = () => {
                     id="cost-input"
                     type="number"
                     step="0.01"
-                    defaultValue={selectedOccurrence.actualCost}
+                    defaultValue={
+                      selectedOccurrence.actualCost ??
+                      selectedOccurrence.estimatedCost ??
+                      ""
+                    }
                     placeholder="0.00"
                     className="w-full p-2 border rounded"
                   />

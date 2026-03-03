@@ -25,10 +25,9 @@ dotenv.config();
 
 const app = express();
 
-// Confiar no proxy (necessário quando o deploy passa cabeçalhos X-Forwarded-For)
-// Plataformas como Railway, Heroku, Vercel, etc. setam esse header.
-// Isso permite que express-rate-limit identifique corretamente o IP do cliente.
-app.set("trust proxy", true);
+// Confiar em 1 nível de proxy (Railway, Heroku, etc.)
+// Usar o número 1 em vez de `true` para evitar bypass de rate-limit.
+app.set("trust proxy", 1);
 
 // Configurar origens permitidas via env
 const allowedOrigins: string[] = process.env.CORS_ORIGIN

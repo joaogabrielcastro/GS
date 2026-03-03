@@ -12,7 +12,6 @@ import DashboardAdmin from "@/pages/DashboardAdmin";
 import DashboardFinanceiro from "@/pages/DashboardFinanceiro";
 import ChecklistPage from "@/pages/ChecklistPage";
 import ReportIssuePage from "@/pages/ReportIssuePage";
-import TestAuth from "@/pages/TestAuth";
 // Componente de rota protegida
 const ProtectedRoute: React.FC<{
   children: React.ReactNode;
@@ -92,7 +91,6 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route path="/test" element={<TestAuth />} />
 
             <Route
               path="/motorista"

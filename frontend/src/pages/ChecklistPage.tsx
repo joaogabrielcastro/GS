@@ -249,6 +249,7 @@ const FileInput: React.FC<{
       <input
         type="file"
         accept="image/*"
+        capture="environment"
         className="hidden"
         onChange={handleFile}
       />

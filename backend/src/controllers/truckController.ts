@@ -20,15 +20,15 @@ export const truckController = {
 
       const truck = await prisma.truck.create({
         data: {
-          plate,
+          plate: String(plate).trim().toUpperCase(),
           model,
           brand,
-          year,
-          status,
+          year: parseInt(String(year), 10),
+          status: status || "ATIVO",
           acquisitionDate: acquisitionDate
             ? new Date(acquisitionDate)
             : undefined,
-          totalKm: totalKm || 0,
+          totalKm: totalKm ? parseInt(String(totalKm), 10) : 0,
           notes,
         },
       });
@@ -138,14 +138,35 @@ export const truckController = {
   async update(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const data = req.body;
+      const {
+        plate,
+        model,
+        brand,
+        year,
+        status,
+        acquisitionDate,
+        totalKm,
+        notes,
+      } = req.body;
+
+      const updateData: any = {};
+      if (plate !== undefined)
+        updateData.plate = String(plate).trim().toUpperCase();
+      if (model !== undefined) updateData.model = model;
+      if (brand !== undefined) updateData.brand = brand;
+      if (year !== undefined) updateData.year = parseInt(String(year), 10);
+      if (status !== undefined) updateData.status = status;
+      if (acquisitionDate !== undefined)
+        updateData.acquisitionDate = acquisitionDate
+          ? new Date(acquisitionDate)
+          : null;
+      if (totalKm !== undefined)
+        updateData.totalKm = parseInt(String(totalKm), 10);
+      if (notes !== undefined) updateData.notes = notes;
 
       const truck = await prisma.truck.update({
         where: { id },
-        data: {
-          ...data,
-          updatedAt: new Date(),
-        },
+        data: updateData,
       });
 
       res.json({ message: "Caminhão atualizado com sucesso", truck });
