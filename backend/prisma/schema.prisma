@@ -25,6 +25,17 @@ enum TruckStatus {
   INATIVO
 }
 
+enum VehicleType {
+  TOCO            // 2 eixos - 6 pneus
+  TRUCK           // 3 eixos - 10 pneus
+  BITRUCK         // 4 eixos - 14 pneus
+  CAVALO_MECANICO // Trator 3 eixos - 10 pneus (sem carreta)
+  CARRETA_SIMPLES // Cavalo + 1 semirreboque 2 eixos - 18 pneus
+  CARRETA_LS      // Cavalo + 1 semirreboque 3 eixos - 22 pneus
+  BITREM          // Cavalo + 2 semirreboques - 26 pneus
+  RODOTREM        // Cavalo + 3 semirreboques - 34 pneus
+}
+
 enum OccurrenceType {
   PNEU_ESTOURADO
   PROBLEMA_MECANICO
@@ -42,15 +53,8 @@ enum OccurrenceStatus {
   RESOLVIDO
 }
 
-enum TirePosition {
-  DIANTEIRO_ESQUERDO
-  DIANTEIRO_DIREITO
-  TRASEIRO_ESQUERDO_EXTERNO
-  TRASEIRO_ESQUERDO_INTERNO
-  TRASEIRO_DIREITO_EXTERNO
-  TRASEIRO_DIREITO_INTERNO
-  ESTEPE
-}
+// TirePosition foi substituído por String dinâmica (ex: E1E, E2EE, E2DI, ESTEPE1)
+// Posições variam conforme o tipo de veículo
 
 enum TireStatus {
   NOVO
@@ -101,6 +105,7 @@ model Truck {
   model             String
   brand             String
   year              Int
+  vehicleType       VehicleType @default(TOCO)
   status            TruckStatus @default(ATIVO)
   currentDriverId   String?
   acquisitionDate   DateTime?
@@ -129,7 +134,8 @@ model Tire {
   code              String      @unique
   brand             String
   model             String
-  position          TirePosition
+  // Posição dinâmica: E1E, E1D (dianteiros), E2EE, E2EI, E2DE, E2DI (traseiros duplos), ESTEPE1...
+  position          String
   status            TireStatus  @default(NOVO)
   installationDate  DateTime    @default(now())
   initialKm         Int
@@ -176,9 +182,6 @@ model DailyChecklist {
   truckId           String
   driverId          String
   date              DateTime @default(now())
-  cabinPhotoUrl     String?
-  tiresPhotoUrl     String?
-  canvasPhotoUrl    String?
   overallCondition  String?
   tiresCondition    String?
   cabinCondition    String?
@@ -190,13 +193,33 @@ model DailyChecklist {
   createdAt         DateTime @default(now())
 
   // Relations
-  truck  Truck @relation(fields: [truckId], references: [id])
-  driver User  @relation(fields: [driverId], references: [id])
+  truck  Truck           @relation(fields: [truckId], references: [id])
+  driver User            @relation(fields: [driverId], references: [id])
+  photos ChecklistPhoto[]
 
   @@index([truckId])
   @@index([driverId])
   @@index([date])
   @@map("daily_checklists")
+}
+
+model ChecklistPhoto {
+  id          String  @id @default(uuid())
+  checklistId String
+  // Categoria: CABINE | LONA | PNEU | EIXO (para fotos gerais por eixo)
+  category    String
+  // Número do eixo (1, 2, 3...) quando category = EIXO, null para outros
+  axleNumber  Int?
+  // Lado: ESQ | DIR | null (para fotos gerais)
+  side        String?
+  photoUrl    String
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  checklist DailyChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  @@index([checklistId])
+  @@map("checklist_photos")
 }
 
 model Occurrence {
@@ -212,7 +235,7 @@ model Occurrence {
   photoUrls       String[]
   estimatedCost   Decimal?         @db.Decimal(10, 2)
   actualCost      Decimal?         @db.Decimal(10, 2)
-  hasFinalcialImpact Boolean       @default(false)
+  hasFinancialImpact Boolean       @default(false)
   resolutionNotes String?
   occurredAt      DateTime         @default(now())
   resolvedAt      DateTime?

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import Pagination from "@/components/Pagination";
 import { useAuth } from "@/contexts/AuthContext";
 import { dashboardService, AdminStats } from "@/services/dashboardService";
 import {
@@ -9,6 +10,19 @@ import {
   tireService,
   notificationService,
 } from "@/services/api";
+import {
+  VEHICLE_TYPE_LABELS,
+  getTirePositions,
+  getTirePositionLabel,
+  OCCURRENCE_STATUS_LABELS,
+  OCCURRENCE_TYPE_LABELS,
+  TIRE_STATUS_LABELS,
+  TRUCK_STATUS_LABELS,
+  type VehicleType,
+  type OccurrenceStatus,
+  type TireStatus,
+  type TruckStatus,
+} from "@/types";
 import {
   LogOut,
   Truck,
@@ -76,15 +90,34 @@ const DashboardAdmin: React.FC = () => {
 
   // Data states for other tabs
   const [trucks, setTrucks] = useState<any[]>([]);
+  const [truckPage, setTruckPage] = useState(1);
+  const [truckTotal, setTruckTotal] = useState(0);
+  const [truckTotalPages, setTruckTotalPages] = useState(1);
+  const [allTrucks, setAllTrucks] = useState<any[]>([]); // full list for form selectors
   const [drivers, setDrivers] = useState<any[]>([]);
   const [occurrences, setOccurrences] = useState<any[]>([]);
   const [checklists, setChecklists] = useState<any[]>([]);
 
   // Tire Management State
   const [tires, setTires] = useState<any[]>([]);
+  const [tirePage, setTirePage] = useState(1);
+  const [tireTotal, setTireTotal] = useState(0);
+  const [tireTotalPages, setTireTotalPages] = useState(1);
   const [tireStats, setTireStats] = useState<any>(null);
   const [isTireModalOpen, setIsTireModalOpen] = useState(false);
   const [selectedTire, setSelectedTire] = useState<any>(null);
+  const [tireFormTruckId, setTireFormTruckId] = useState("");
+  const [tireEventType, setTireEventType] = useState("");
+  const [tireEventKm, setTireEventKm] = useState("");
+  const [tireEventCost, setTireEventCost] = useState("");
+  const [tireEventNotes, setTireEventNotes] = useState("");
+
+  // Dynamic positions for tire form based on selected truck vehicleType
+  const tireFormPositions = useMemo(() => {
+    const truck = allTrucks.find((t) => t.id === tireFormTruckId);
+    if (!truck?.vehicleType) return [];
+    return getTirePositions(truck.vehicleType as VehicleType);
+  }, [tireFormTruckId, allTrucks]);
 
   // Notifications State
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -119,8 +152,13 @@ const DashboardAdmin: React.FC = () => {
           const data = await dashboardService.getAdminStats();
           setStats(data);
         } else if (activeTab === "caminhoes") {
-          const data = await truckService.list();
-          setTrucks(data);
+          const result = await truckService.list({
+            page: truckPage,
+            limit: 10,
+          });
+          setTrucks(result.data);
+          setTruckTotal(result.total);
+          setTruckTotalPages(result.totalPages);
         } else if (activeTab === "motoristas") {
           const data = await authService.listUsers("MOTORISTA");
           setDrivers(data);
@@ -131,10 +169,18 @@ const DashboardAdmin: React.FC = () => {
           const data = await checklistService.list();
           setChecklists(data);
         } else if (activeTab === "pneus") {
-          const data = await tireService.list();
-          const stats = await tireService.getStatistics();
-          setTires(data);
+          const [result, stats, truckData] = await Promise.all([
+            tireService.list({ page: tirePage, limit: 10 }),
+            tireService.getStatistics(),
+            allTrucks.length === 0
+              ? truckService.listAll()
+              : Promise.resolve(allTrucks),
+          ]);
+          setTires(result.data);
+          setTireTotal(result.total);
+          setTireTotalPages(result.totalPages);
           setTireStats(stats);
+          if (allTrucks.length === 0) setAllTrucks(truckData);
         }
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
@@ -145,7 +191,7 @@ const DashboardAdmin: React.FC = () => {
     };
 
     fetchData();
-  }, [activeTab]);
+  }, [activeTab, truckPage, tirePage]);
 
   // Handlers
   const handleSaveTruck = async (e: React.FormEvent) => {
@@ -165,8 +211,10 @@ const DashboardAdmin: React.FC = () => {
       setIsTruckModalOpen(false);
       setEditingTruck(null);
       // Refresh list
-      const updated = await truckService.list();
-      setTrucks(updated);
+      const updated = await truckService.list({ page: truckPage, limit: 10 });
+      setTrucks(updated.data);
+      setTruckTotal(updated.total);
+      setTruckTotalPages(updated.totalPages);
     } catch (error) {
       toast.error("Erro ao salvar caminhão");
     }
@@ -196,30 +244,55 @@ const DashboardAdmin: React.FC = () => {
     try {
       const form = e.target as HTMLFormElement;
       const formData = new FormData(form);
-      const data = Object.fromEntries(formData.entries());
+      const data: any = Object.fromEntries(formData.entries());
 
-      // If needed, parse numbers
-      // data.cost = parseFloat(data.cost as string);
+      // Parse numbers
+      if (data.cost) data.cost = parseFloat(data.cost);
+      if (data.initialKm) data.initialKm = parseInt(data.initialKm, 10);
+      if (data.lifeExpectancyKm)
+        data.lifeExpectancyKm = parseInt(data.lifeExpectancyKm, 10);
 
-      if (selectedTire) {
-        // This might be an update or registration of event.
-        // For now let's assume this modal is just for CREATION or simple updates.
-        // Real tire management (retread, discard) is complex, but let's start with CREATE.
-        // If selectedTire is set, maybe we just want to update basic info?
-        // Or maybe the button "Gerenciar" should open a different modal?
-        // Let's stick to Create for now.
-      } else {
-        await tireService.create(data);
-        toast.success("Pneu cadastrado!");
-      }
+      await tireService.create(data);
+      toast.success("Pneu cadastrado!");
 
       setIsTireModalOpen(false);
-      const updated = await tireService.list();
-      setTires(updated);
-      const updatedStats = await tireService.getStatistics();
+      setTireFormTruckId("");
+      const [updated, updatedStats] = await Promise.all([
+        tireService.list({ page: tirePage, limit: 10 }),
+        tireService.getStatistics(),
+      ]);
+      setTires(updated.data);
+      setTireTotal(updated.total);
+      setTireTotalPages(updated.totalPages);
       setTireStats(updatedStats);
-    } catch (error) {
-      toast.error("Erro ao salvar pneu");
+    } catch (error: any) {
+      const msg = error?.response?.data?.error || "Erro ao salvar pneu";
+      toast.error(msg);
+    }
+  };
+
+  const handleTireEvent = async (eventType: string) => {
+    if (!selectedTire) return;
+    try {
+      const km = parseInt(tireEventKm, 10) || selectedTire.currentKm;
+      await tireService.registerEvent(selectedTire.id, {
+        eventType,
+        description: tireEventNotes || `Evento: ${eventType}`,
+        kmAtEvent: km,
+        cost: tireEventCost ? parseFloat(tireEventCost) : undefined,
+      });
+      toast.success("Evento registrado!");
+      setIsTireModalOpen(false);
+      setSelectedTire(null);
+      setTireEventKm("");
+      setTireEventCost("");
+      setTireEventNotes("");
+      const updated = await tireService.list({ page: tirePage, limit: 10 });
+      setTires(updated.data);
+      setTireTotal(updated.total);
+      setTireTotalPages(updated.totalPages);
+    } catch {
+      toast.error("Erro ao registrar evento");
     }
   };
 
@@ -542,6 +615,9 @@ const DashboardAdmin: React.FC = () => {
                             Modelo
                           </th>
                           <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            Tipo / Eixos
+                          </th>
+                          <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             Status
                           </th>
                           <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -568,6 +644,15 @@ const DashboardAdmin: React.FC = () => {
                               {truck.brand} {truck.model} ({truck.year})
                             </td>
                             <td className="px-6 py-4">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                                {truck.vehicleType
+                                  ? VEHICLE_TYPE_LABELS[
+                                      truck.vehicleType as VehicleType
+                                    ] || truck.vehicleType
+                                  : "—"}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
                               <span
                                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                   truck.status === "ATIVO"
@@ -577,7 +662,9 @@ const DashboardAdmin: React.FC = () => {
                                       : "bg-gray-100 text-gray-800"
                                 }`}
                               >
-                                {truck.status}
+                                {TRUCK_STATUS_LABELS[
+                                  truck.status as TruckStatus
+                                ] ?? truck.status}
                               </span>
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-600">
@@ -622,6 +709,15 @@ const DashboardAdmin: React.FC = () => {
                         )}
                       </tbody>
                     </table>
+                    <Pagination
+                      page={truckPage}
+                      totalPages={truckTotalPages}
+                      total={truckTotal}
+                      limit={10}
+                      onPageChange={(p) => {
+                        setTruckPage(p);
+                      }}
+                    />
                   </div>
                 </div>
               </div>
@@ -792,7 +888,9 @@ const DashboardAdmin: React.FC = () => {
                                     : "bg-green-100 text-green-800"
                               }`}
                             >
-                              {occ.status}
+                              {OCCURRENCE_STATUS_LABELS[
+                                occ.status as OccurrenceStatus
+                              ] ?? occ.status}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-sm">
@@ -928,30 +1026,30 @@ const DashboardAdmin: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     <KPICard
                       title="Total de Pneus"
-                      value={tireStats.total}
-                      sub="Inventário"
+                      value={tireStats.totalTires}
+                      sub="Inventário ativo"
                       icon={Disc}
                       color="blue"
                     />
                     <KPICard
-                      title="Em Uso"
-                      value={tireStats.inService}
-                      sub="Rodando"
+                      title="Custo Total"
+                      value={`R$ ${Number(tireStats.totalCost || 0).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`}
+                      sub="Frota"
                       icon={Activity}
                       color="green"
                     />
                     <KPICard
-                      title="Em Estoque"
-                      value={tireStats.inStock}
-                      sub="Disponíveis"
+                      title="KM Médio"
+                      value={tireStats.averageLifeKm?.toLocaleString()}
+                      sub="Vida média"
                       icon={Disc}
                       color="yellow"
                     />
                     <KPICard
-                      title="Descartados"
-                      value={tireStats.discarded}
-                      sub="Total"
-                      icon={LogOut}
+                      title="Eventos"
+                      value={tireStats.totalEvents}
+                      sub="Registrados"
+                      icon={FileText}
                       color="purple"
                     />
                   </div>
@@ -963,19 +1061,19 @@ const DashboardAdmin: React.FC = () => {
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
                         <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Código
+                        </th>
+                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           Marca/Modelo
                         </th>
                         <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Série
-                        </th>
-                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Medida
+                          Posição
                         </th>
                         <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           Status
                         </th>
                         <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Localização
+                          Caminhão
                         </th>
                         <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           KM Atual
@@ -991,14 +1089,20 @@ const DashboardAdmin: React.FC = () => {
                           key={tire.id}
                           className="hover:bg-gray-50 transition-colors"
                         >
+                          <td className="px-6 py-4 text-sm font-mono text-gray-900">
+                            {tire.code}
+                          </td>
                           <td className="px-6 py-4 text-sm font-medium text-gray-900">
                             {tire.brand} {tire.model}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600">
-                            {tire.serialNumber}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-600">
-                            {tire.size}
+                            <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">
+                              {tire.position}
+                            </span>
+                            <br />
+                            <span className="text-xs text-gray-400">
+                              {getTirePositionLabel(tire.position)}
+                            </span>
                           </td>
                           <td className="px-6 py-4">
                             <span
@@ -1007,25 +1111,50 @@ const DashboardAdmin: React.FC = () => {
                                   ? "bg-green-100 text-green-800"
                                   : tire.status === "RECAPADO"
                                     ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-gray-100 text-gray-800"
+                                    : tire.status === "DESGASTADO" ||
+                                        tire.status === "SUBSTITUIDO"
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-gray-100 text-gray-800"
                               }`}
                             >
-                              {tire.status}
+                              {TIRE_STATUS_LABELS[tire.status as TireStatus] ??
+                                tire.status}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600">
-                            {tire.currentTruckId
-                              ? `Caminhão: ${tire.currentTruck?.plate || "..."}` // Assuming we populate or execute a lookup, but list usually returns flat. API might return nested.
-                              : "Estoque"}
+                            {tire.truck ? `${tire.truck.plate}` : "Estoque"}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600">
                             {tire.currentKm?.toLocaleString()} km
+                            {tire.lifeExpectancyKm &&
+                              (() => {
+                                const used =
+                                  tire.currentKm - (tire.initialKm ?? 0);
+                                const pct = Math.round(
+                                  (used / tire.lifeExpectancyKm) * 100,
+                                );
+                                if (pct >= 90)
+                                  return (
+                                    <span className="ml-2 text-xs font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full">
+                                      ⚠️ {pct}%
+                                    </span>
+                                  );
+                                if (pct >= 75)
+                                  return (
+                                    <span className="ml-2 text-xs font-bold text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded-full">
+                                      ⚠ {pct}%
+                                    </span>
+                                  );
+                                return null;
+                              })()}
                           </td>
                           <td className="px-6 py-4 text-sm">
                             <button
                               onClick={() => {
-                                // View details logic
                                 setSelectedTire(tire);
+                                setTireEventKm("");
+                                setTireEventCost("");
+                                setTireEventNotes("");
                                 setIsTireModalOpen(true);
                               }}
                               className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
@@ -1035,8 +1164,27 @@ const DashboardAdmin: React.FC = () => {
                           </td>
                         </tr>
                       ))}
+                      {tires.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={7}
+                            className="px-6 py-8 text-center text-gray-500"
+                          >
+                            Nenhum pneu cadastrado.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
+                  <Pagination
+                    page={tirePage}
+                    totalPages={tireTotalPages}
+                    total={tireTotal}
+                    limit={10}
+                    onPageChange={(p) => {
+                      setTirePage(p);
+                    }}
+                  />
                 </div>
               </div>
             )}
@@ -1047,7 +1195,7 @@ const DashboardAdmin: React.FC = () => {
       {/* Modals */}
       {isTruckModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md animate-fade-in">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md animate-fade-in max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">
               {editingTruck ? "Editar Caminhão" : "Novo Caminhão"}
             </h2>
@@ -1077,22 +1225,42 @@ const DashboardAdmin: React.FC = () => {
                     required
                   />
                 </div>
-                <input
-                  name="year"
-                  type="number"
-                  placeholder="Ano"
-                  defaultValue={editingTruck?.year}
-                  className="w-full p-2 border rounded"
-                  required
-                />
-                <input
-                  name="totalKm"
-                  type="number"
-                  placeholder="KM Total"
-                  defaultValue={editingTruck?.totalKm}
-                  className="w-full p-2 border rounded"
-                  required
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <input
+                    name="year"
+                    type="number"
+                    placeholder="Ano"
+                    defaultValue={editingTruck?.year}
+                    className="w-full p-2 border rounded"
+                    required
+                  />
+                  <input
+                    name="totalKm"
+                    type="number"
+                    placeholder="KM Total"
+                    defaultValue={editingTruck?.totalKm}
+                    className="w-full p-2 border rounded"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Veículo
+                  </label>
+                  <select
+                    name="vehicleType"
+                    defaultValue={editingTruck?.vehicleType || "TOCO"}
+                    className="w-full p-2 border rounded"
+                  >
+                    {(Object.keys(VEHICLE_TYPE_LABELS) as VehicleType[]).map(
+                      (vt) => (
+                        <option key={vt} value={vt}>
+                          {VEHICLE_TYPE_LABELS[vt]}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </div>
                 <select
                   name="status"
                   defaultValue={editingTruck?.status || "ATIVO"}
@@ -1100,6 +1268,7 @@ const DashboardAdmin: React.FC = () => {
                 >
                   <option value="ATIVO">Ativo</option>
                   <option value="MANUTENCAO">Manutenção</option>
+                  <option value="PARADO">Parado</option>
                   <option value="INATIVO">Inativo</option>
                 </select>
               </div>
@@ -1474,6 +1643,45 @@ const DashboardAdmin: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {/* New ChecklistPhoto records (axle photos) */}
+              {selectedChecklist.photos &&
+                selectedChecklist.photos.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold text-sm text-gray-700 mb-3">
+                      Fotos por Eixo
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {selectedChecklist.photos.map((photo: any) => (
+                        <div key={photo.id} className="border rounded-lg p-2">
+                          <p className="text-center font-semibold mb-1 text-xs text-gray-600">
+                            {photo.category === "EIXO"
+                              ? `Eixo ${photo.axleNumber} — ${photo.side === "ESQ" ? "Esquerdo" : photo.side === "DIR" ? "Direito" : ""}`
+                              : photo.category}
+                          </p>
+                          <div className="aspect-video bg-gray-100 rounded overflow-hidden">
+                            <ImageWithFallback
+                              src={getImageUrl(photo.photoUrl)}
+                              alt={photo.category}
+                              className="w-full h-full object-cover cursor-pointer"
+                              onClick={() =>
+                                window.open(
+                                  getImageUrl(photo.photoUrl),
+                                  "_blank",
+                                )
+                              }
+                            />
+                          </div>
+                          {photo.notes && (
+                            <p className="text-xs text-gray-500 mt-1 truncate">
+                              {photo.notes}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
             </div>
 
             <div className="mt-8 flex justify-end">
@@ -1492,60 +1700,163 @@ const DashboardAdmin: React.FC = () => {
       {isTireModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md animate-fade-in max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">
-              {selectedTire ? "Gerenciar Pneu" : "Novo Pneu"}
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">
+                {selectedTire ? "Gerenciar Pneu" : "Novo Pneu"}
+              </h2>
+              <button
+                onClick={() => {
+                  setIsTireModalOpen(false);
+                  setSelectedTire(null);
+                }}
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
 
             {!selectedTire ? (
+              // CREATE FORM
               <form onSubmit={handleSaveTire}>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      name="brand"
-                      placeholder="Marca"
-                      className="w-full p-2 border rounded"
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Caminhão *
+                    </label>
+                    <select
+                      name="truckId"
                       required
-                    />
+                      value={tireFormTruckId}
+                      onChange={(e) => setTireFormTruckId(e.target.value)}
+                      className="w-full p-2 border rounded mt-1"
+                    >
+                      <option value="">Selecione o caminhão</option>
+                      {allTrucks.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.plate} — {t.brand} {t.model}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {tireFormTruckId && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Posição *
+                      </label>
+                      <select
+                        name="position"
+                        required
+                        className="w-full p-2 border rounded mt-1"
+                      >
+                        <option value="">Selecione a posição</option>
+                        {tireFormPositions.map((pos) => (
+                          <option key={pos} value={pos}>
+                            {getTirePositionLabel(pos)} ({pos})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Código / Nº Série *
+                    </label>
                     <input
-                      name="model"
-                      placeholder="Modelo"
-                      className="w-full p-2 border rounded"
+                      name="code"
+                      placeholder="Ex: PNE-001"
+                      className="w-full p-2 border rounded mt-1"
                       required
                     />
                   </div>
-                  <input
-                    name="serialNumber"
-                    placeholder="Número de Série"
-                    className="w-full p-2 border rounded"
-                    required
-                  />
-                  <input
-                    name="size"
-                    placeholder="Medida (ex: 295/80R22.5)"
-                    className="w-full p-2 border rounded"
-                    required
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <select
-                      name="status"
-                      defaultValue="NOVO"
-                      className="w-full p-2 border rounded"
-                    >
-                      <option value="NOVO">Novo</option>
-                      <option value="RECAPADO">Recapado</option>
-                      <option value="USADO">Usado</option>
-                    </select>
-
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Marca
+                      </label>
+                      <input
+                        name="brand"
+                        placeholder="Bridgestone"
+                        className="w-full p-2 border rounded mt-1"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Modelo
+                      </label>
+                      <input
+                        name="model"
+                        placeholder="R283"
+                        className="w-full p-2 border rounded mt-1"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        KM Inicial *
+                      </label>
+                      <input
+                        name="initialKm"
+                        type="number"
+                        placeholder="0"
+                        className="w-full p-2 border rounded mt-1"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Vida útil (km)
+                      </label>
+                      <input
+                        name="lifeExpectancyKm"
+                        type="number"
+                        placeholder="120000"
+                        className="w-full p-2 border rounded mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Custo (R$)
+                      </label>
+                      <input
+                        name="cost"
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        className="w-full p-2 border rounded mt-1"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Status
+                      </label>
+                      <select
+                        name="status"
+                        defaultValue="NOVO"
+                        className="w-full p-2 border rounded mt-1"
+                      >
+                        <option value="NOVO">Novo</option>
+                        <option value="BOM">Bom</option>
+                        <option value="RECAPADO">Recapado</option>
+                        <option value="DESGASTADO">Desgastado</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Observações
+                    </label>
                     <input
-                      name="cost"
-                      type="number"
-                      placeholder="Custo (R$)"
-                      step="0.01"
-                      className="w-full p-2 border rounded"
+                      name="notes"
+                      placeholder="Opcional"
+                      className="w-full p-2 border rounded mt-1"
                     />
                   </div>
                 </div>
-                <div className="mt-6 flex justify-end gap-2">
+                <div className="mt-5 flex justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setIsTireModalOpen(false)}
@@ -1557,54 +1868,122 @@ const DashboardAdmin: React.FC = () => {
                     type="submit"
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                   >
-                    Salvar
+                    Cadastrar Pneu
                   </button>
                 </div>
               </form>
             ) : (
+              // MANAGE EXISTING TIRE
               <div className="space-y-4">
-                {/* Basic Info Read-only */}
-                <div className="bg-gray-50 p-3 rounded text-sm">
+                <div className="bg-gray-50 p-3 rounded-lg text-sm space-y-1">
                   <p>
-                    <strong>Série:</strong> {selectedTire.serialNumber}
+                    <strong>Código:</strong> {selectedTire.code}
                   </p>
                   <p>
                     <strong>Marca/Modelo:</strong> {selectedTire.brand}{" "}
                     {selectedTire.model}
                   </p>
                   <p>
-                    <strong>Status:</strong> {selectedTire.status}
+                    <strong>Posição:</strong>{" "}
+                    {getTirePositionLabel(selectedTire.position)} (
+                    {selectedTire.position})
                   </p>
                   <p>
-                    <strong>KM Atual:</strong> {selectedTire.currentKm} km
+                    <strong>Status:</strong>{" "}
+                    {TIRE_STATUS_LABELS[selectedTire.status as TireStatus] ??
+                      selectedTire.status}
                   </p>
+                  <p>
+                    <strong>KM Atual:</strong>{" "}
+                    {selectedTire.currentKm?.toLocaleString()} km
+                  </p>
+                  {selectedTire.lifeExpectancyKm && (
+                    <div className="mt-2">
+                      <div className="flex justify-between text-xs text-gray-500 mb-1">
+                        <span>Vida útil</span>
+                        <span>
+                          {Math.round(
+                            ((selectedTire.currentKm - selectedTire.initialKm) /
+                              selectedTire.lifeExpectancyKm) *
+                              100,
+                          )}
+                          %
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-500 h-2 rounded-full"
+                          style={{
+                            width: `${Math.min(100, Math.round(((selectedTire.currentKm - selectedTire.initialKm) / selectedTire.lifeExpectancyKm) * 100))}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="border-t pt-4">
-                  <h3 className="font-semibold mb-2">Registrar Evento</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button className="p-2 border rounded hover:bg-gray-50 text-sm">
-                      Instalar
-                    </button>
-                    <button className="p-2 border rounded hover:bg-gray-50 text-sm">
-                      Remover
-                    </button>
-                    <button className="p-2 border rounded hover:bg-gray-50 text-sm">
-                      Recapar
-                    </button>
-                    <button className="p-2 border rounded hover:bg-gray-50 text-sm text-red-600 border-red-200">
-                      Descartar
-                    </button>
+                  <h3 className="font-semibold mb-3">Registrar Evento</h3>
+                  <div className="space-y-2">
+                    <input
+                      type="number"
+                      placeholder="KM no evento"
+                      value={tireEventKm}
+                      onChange={(e) => setTireEventKm(e.target.value)}
+                      className="w-full p-2 border rounded text-sm"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Custo R$ (opcional)"
+                        value={tireEventCost}
+                        onChange={(e) => setTireEventCost(e.target.value)}
+                        className="w-full p-2 border rounded text-sm"
+                      />
+                      <input
+                        placeholder="Observação"
+                        value={tireEventNotes}
+                        onChange={(e) => setTireEventNotes(e.target.value)}
+                        className="w-full p-2 border rounded text-sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <button
+                        onClick={() => handleTireEvent("MANUTENCAO")}
+                        className="p-2 border rounded hover:bg-blue-50 text-sm text-blue-700 border-blue-200"
+                      >
+                        Manutenção
+                      </button>
+                      <button
+                        onClick={() => handleTireEvent("RECAPAGEM")}
+                        className="p-2 border rounded hover:bg-yellow-50 text-sm text-yellow-700 border-yellow-200"
+                      >
+                        Recapar
+                      </button>
+                      <button
+                        onClick={() => handleTireEvent("REMOCAO")}
+                        className="p-2 border rounded hover:bg-gray-50 text-sm"
+                      >
+                        Remover
+                      </button>
+                      <button
+                        onClick={() => handleTireEvent("ESTOURO")}
+                        className="p-2 border rounded hover:bg-red-50 text-sm text-red-600 border-red-200"
+                      >
+                        Estouro
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-400 mt-2 text-center">
-                    Funcionalidades de evento em breve.
-                  </p>
                 </div>
 
-                <div className="mt-6 flex justify-end gap-2">
+                <div className="mt-4 flex justify-end">
                   <button
                     type="button"
-                    onClick={() => setIsTireModalOpen(false)}
+                    onClick={() => {
+                      setIsTireModalOpen(false);
+                      setSelectedTire(null);
+                    }}
                     className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
                   >
                     Fechar

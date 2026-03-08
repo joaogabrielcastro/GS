@@ -1,7 +1,5 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "../lib/prisma";
 
 export const truckController = {
   // Criar caminhão
@@ -13,6 +11,7 @@ export const truckController = {
         brand,
         year,
         status,
+        vehicleType,
         acquisitionDate,
         totalKm,
         notes,
@@ -25,6 +24,7 @@ export const truckController = {
           brand,
           year: parseInt(String(year), 10),
           status: status || "ATIVO",
+          vehicleType: vehicleType || "TOCO",
           acquisitionDate: acquisitionDate
             ? new Date(acquisitionDate)
             : undefined,
@@ -47,41 +47,42 @@ export const truckController = {
   // Listar caminhões
   async list(req: Request, res: Response) {
     try {
-      const { status, active } = req.query;
+      const { status, active, page, limit } = req.query;
+
+      const take = limit ? Math.min(Number(limit), 200) : undefined;
+      const skip = page && take ? (Number(page) - 1) * take : undefined;
 
       const where: any = {};
       if (status) where.status = status;
       if (active !== undefined) where.active = active === "true";
 
-      const trucks = await prisma.truck.findMany({
-        where,
-        include: {
-          currentDriver: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
+      const [trucks, total] = await Promise.all([
+        prisma.truck.findMany({
+          where,
+          take,
+          skip,
+          include: {
+            currentDriver: { select: { id: true, name: true, email: true } },
+            tires: {
+              where: { active: true },
+              select: { id: true, code: true, position: true, status: true },
             },
+            _count: { select: { checklists: true, occurrences: true } },
           },
-          tires: {
-            where: { active: true },
-            select: {
-              id: true,
-              code: true,
-              position: true,
-              status: true,
-            },
-          },
-          _count: {
-            select: {
-              checklists: true,
-              occurrences: true,
-            },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-      });
+          orderBy: { createdAt: "desc" },
+        }),
+        page ? prisma.truck.count({ where }) : Promise.resolve(null),
+      ]);
 
+      if (page) {
+        return res.json({
+          data: trucks,
+          total,
+          page: Number(page),
+          limit: take,
+          totalPages: Math.ceil((total ?? 0) / (take ?? 1)),
+        });
+      }
       res.json(trucks);
     } catch (error) {
       return res.status(500).json({ error: "Erro ao listar caminhões" });
@@ -144,6 +145,7 @@ export const truckController = {
         brand,
         year,
         status,
+        vehicleType,
         acquisitionDate,
         totalKm,
         notes,
@@ -156,6 +158,7 @@ export const truckController = {
       if (brand !== undefined) updateData.brand = brand;
       if (year !== undefined) updateData.year = parseInt(String(year), 10);
       if (status !== undefined) updateData.status = status;
+      if (vehicleType !== undefined) updateData.vehicleType = vehicleType;
       if (acquisitionDate !== undefined)
         updateData.acquisitionDate = acquisitionDate
           ? new Date(acquisitionDate)

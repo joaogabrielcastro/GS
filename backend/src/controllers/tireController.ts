@@ -1,7 +1,5 @@
-import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Request, Response } from "express";
+import { prisma } from "../lib/prisma";
 
 export const tireController = {
   // Criar pneu
@@ -25,7 +23,7 @@ export const tireController = {
       });
 
       if (existingTire) {
-        return res.status(409).json({ error: 'Código de pneu já cadastrado' });
+        return res.status(409).json({ error: "Código de pneu já cadastrado" });
       }
 
       // Verificar se o caminhão existe
@@ -34,7 +32,7 @@ export const tireController = {
       });
 
       if (!truck) {
-        return res.status(404).json({ error: 'Caminhão não encontrado' });
+        return res.status(404).json({ error: "Caminhão não encontrado" });
       }
 
       const tire = await prisma.tire.create({
@@ -56,51 +54,59 @@ export const tireController = {
       await prisma.tireEvent.create({
         data: {
           tireId: tire.id,
-          eventType: 'INSTALACAO',
+          eventType: "INSTALACAO",
           description: `Pneu instalado na posição ${position}`,
           kmAtEvent: initialKm,
           cost,
         },
       });
 
-      res.status(201).json({ message: 'Pneu cadastrado com sucesso', tire });
+      res.status(201).json({ message: "Pneu cadastrado com sucesso", tire });
     } catch (error) {
-      console.error('Erro ao criar pneu:', error);
-      res.status(500).json({ error: 'Erro ao cadastrar pneu' });
+      console.error("Erro ao criar pneu:", error);
+      res.status(500).json({ error: "Erro ao cadastrar pneu" });
     }
   },
 
   // Listar pneus
   async list(req: Request, res: Response) {
     try {
-      const { truckId, status, active } = req.query;
+      const { truckId, status, active, page, limit } = req.query;
+
+      const take = limit ? Math.min(Number(limit), 200) : undefined;
+      const skip = page && take ? (Number(page) - 1) * take : undefined;
 
       const where: any = {};
       if (truckId) where.truckId = truckId;
       if (status) where.status = status;
-      if (active !== undefined) where.active = active === 'true';
+      if (active !== undefined) where.active = active === "true";
 
-      const tires = await prisma.tire.findMany({
-        where,
-        include: {
-          truck: {
-            select: {
-              id: true,
-              plate: true,
-              model: true,
-            },
+      const [tires, total] = await Promise.all([
+        prisma.tire.findMany({
+          where,
+          take,
+          skip,
+          include: {
+            truck: { select: { id: true, plate: true, model: true } },
+            events: { take: 5, orderBy: { createdAt: "desc" } },
           },
-          events: {
-            take: 5,
-            orderBy: { createdAt: 'desc' },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
+          orderBy: { createdAt: "desc" },
+        }),
+        page ? prisma.tire.count({ where }) : Promise.resolve(null),
+      ]);
 
+      if (page) {
+        return res.json({
+          data: tires,
+          total,
+          page: Number(page),
+          limit: take,
+          totalPages: Math.ceil((total ?? 0) / (take ?? 1)),
+        });
+      }
       res.json(tires);
     } catch (error) {
-      res.status(500).json({ error: 'Erro ao listar pneus' });
+      res.status(500).json({ error: "Erro ao listar pneus" });
     }
   },
 
@@ -121,13 +127,13 @@ export const tireController = {
             },
           },
           events: {
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: "desc" },
           },
         },
       });
 
       if (!tire) {
-        return res.status(404).json({ error: 'Pneu não encontrado' });
+        return res.status(404).json({ error: "Pneu não encontrado" });
       }
 
       // Calcular estatísticas
@@ -143,7 +149,7 @@ export const tireController = {
         },
       });
     } catch (error) {
-      res.status(500).json({ error: 'Erro ao buscar pneu' });
+      res.status(500).json({ error: "Erro ao buscar pneu" });
     }
   },
 
@@ -161,9 +167,9 @@ export const tireController = {
         },
       });
 
-      res.json({ message: 'Pneu atualizado com sucesso', tire });
+      res.json({ message: "Pneu atualizado com sucesso", tire });
     } catch (error) {
-      res.status(500).json({ error: 'Erro ao atualizar pneu' });
+      res.status(500).json({ error: "Erro ao atualizar pneu" });
     }
   },
 
@@ -178,7 +184,7 @@ export const tireController = {
       });
 
       if (!tire) {
-        return res.status(404).json({ error: 'Pneu não encontrado' });
+        return res.status(404).json({ error: "Pneu não encontrado" });
       }
 
       const event = await prisma.tireEvent.create({
@@ -196,12 +202,12 @@ export const tireController = {
       let newStatus = tire.status;
       let updateData: any = { currentKm: kmAtEvent };
 
-      if (eventType === 'ESTOURO' || eventType === 'SUBSTITUIDO') {
-        newStatus = 'SUBSTITUIDO';
+      if (eventType === "ESTOURO" || eventType === "SUBSTITUIDO") {
+        newStatus = "SUBSTITUIDO";
         updateData.active = false;
         updateData.status = newStatus;
-      } else if (eventType === 'RECAPAGEM') {
-        newStatus = 'RECAPADO';
+      } else if (eventType === "RECAPAGEM") {
+        newStatus = "RECAPADO";
         updateData.status = newStatus;
       }
 
@@ -210,10 +216,10 @@ export const tireController = {
         data: updateData,
       });
 
-      res.status(201).json({ message: 'Evento registrado com sucesso', event });
+      res.status(201).json({ message: "Evento registrado com sucesso", event });
     } catch (error) {
-      console.error('Erro ao registrar evento:', error);
-      res.status(500).json({ error: 'Erro ao registrar evento' });
+      console.error("Erro ao registrar evento:", error);
+      res.status(500).json({ error: "Erro ao registrar evento" });
     }
   },
 
@@ -233,26 +239,23 @@ export const tireController = {
       });
 
       // Calcular estatísticas
-      const totalCost = tires.reduce(
-        (sum, tire) => sum + Number(tire.cost),
-        0
-      );
+      const totalCost = tires.reduce((sum, tire) => sum + Number(tire.cost), 0);
 
       const totalEvents = tires.reduce(
         (sum, tire) => sum + tire.events.length,
-        0
+        0,
       );
 
       const averageLifeKm =
         tires.length > 0
           ? tires.reduce(
               (sum, tire) => sum + (tire.currentKm - tire.initialKm),
-              0
+              0,
             ) / tires.length
           : 0;
 
       const eventsByType = await prisma.tireEvent.groupBy({
-        by: ['eventType'],
+        by: ["eventType"],
         _count: true,
         where: truckId ? { tire: { truckId: truckId as string } } : {},
       });
@@ -263,11 +266,14 @@ export const tireController = {
         totalEvents,
         averageLifeKm: Math.round(averageLifeKm),
         eventsByType,
-        costPerKm: averageLifeKm > 0 ? (totalCost / (averageLifeKm * tires.length)).toFixed(4) : 0,
+        costPerKm:
+          averageLifeKm > 0
+            ? (totalCost / (averageLifeKm * tires.length)).toFixed(4)
+            : 0,
       });
     } catch (error) {
-      console.error('Erro ao calcular estatísticas:', error);
-      res.status(500).json({ error: 'Erro ao calcular estatísticas' });
+      console.error("Erro ao calcular estatísticas:", error);
+      res.status(500).json({ error: "Erro ao calcular estatísticas" });
     }
   },
 
@@ -280,13 +286,13 @@ export const tireController = {
         where: { id },
         data: {
           active: false,
-          status: 'DESCARTADO',
+          status: "DESCARTADO",
         },
       });
 
-      res.json({ message: 'Pneu desativado com sucesso' });
+      res.json({ message: "Pneu desativado com sucesso" });
     } catch (error) {
-      res.status(500).json({ error: 'Erro ao desativar pneu' });
+      res.status(500).json({ error: "Erro ao desativar pneu" });
     }
   },
 
@@ -304,9 +310,9 @@ export const tireController = {
           },
           events: {
             where: {
-              eventType: { in: ['ESTOURO', 'MANUTENCAO'] },
+              eventType: { in: ["ESTOURO", "MANUTENCAO"] },
             },
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: "desc" },
             take: 5,
           },
         },
@@ -323,15 +329,15 @@ export const tireController = {
             tireId: tire.id,
             tireCode: tire.code,
             truck: tire.truck,
-            type: 'VIDA_UTIL',
-            severity: kmUsed >= tire.lifeExpectancyKm ? 'CRITICO' : 'ALERTA',
+            type: "VIDA_UTIL",
+            severity: kmUsed >= tire.lifeExpectancyKm ? "CRITICO" : "ALERTA",
             message: `Pneu próximo do fim da vida útil (${kmUsed}/${tire.lifeExpectancyKm} km)`,
           });
         }
 
         // Alerta de recorrência de problemas
         const problemEvents = tire.events.filter(
-          (e) => e.eventType === 'ESTOURO' || e.eventType === 'MANUTENCAO'
+          (e) => e.eventType === "ESTOURO" || e.eventType === "MANUTENCAO",
         );
 
         if (problemEvents.length >= 3) {
@@ -339,8 +345,8 @@ export const tireController = {
             tireId: tire.id,
             tireCode: tire.code,
             truck: tire.truck,
-            type: 'RECORRENCIA',
-            severity: 'ALERTA',
+            type: "RECORRENCIA",
+            severity: "ALERTA",
             message: `Pneu com ${problemEvents.length} ocorrências de problemas`,
           });
         }
@@ -348,8 +354,8 @@ export const tireController = {
 
       res.json({ alerts, count: alerts.length });
     } catch (error) {
-      console.error('Erro ao buscar alertas:', error);
-      res.status(500).json({ error: 'Erro ao buscar alertas' });
+      console.error("Erro ao buscar alertas:", error);
+      res.status(500).json({ error: "Erro ao buscar alertas" });
     }
   },
 };

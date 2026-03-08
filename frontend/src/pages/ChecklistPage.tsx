@@ -1,27 +1,138 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { checklistService } from "@/services/api";
 import { dashboardService } from "@/services/dashboardService";
+import { VEHICLE_TYPE_LABELS, VEHICLE_AXLES } from "@/types";
 import toast from "react-hot-toast";
-import { ArrowLeft, Camera, Upload } from "lucide-react";
+import { ArrowLeft, Camera, CheckCircle, AlertTriangle } from "lucide-react";
 
+// ─── SVG Axle Diagram ──────────────────────────────────────────────────────────
+const AxleDiagram = ({ config, leftDone, rightDone }: any) => {
+  const isDbl = config.tiresPerSide === "double";
+  const W = isDbl ? 160 : 110;
+  const tireW = isDbl ? 14 : 16;
+  const gap = isDbl ? 4 : 0;
+  const rightX = isDbl ? W - tireW * 2 - gap : W - tireW;
+  const axleX1 = isDbl ? tireW * 2 + gap : tireW;
+  const axleX2 = isDbl ? W - tireW * 2 - gap : W - tireW;
+  const lc = leftDone ? "#22c55e" : "#94a3b8";
+  const rc = rightDone ? "#22c55e" : "#94a3b8";
+
+  return (
+    <svg
+      viewBox={`0 0 ${W} 46`}
+      className="w-full max-w-xs mx-auto"
+      style={{ height: 46 }}
+    >
+      <rect
+        x={axleX1}
+        y={18}
+        width={axleX2 - axleX1}
+        height={6}
+        fill="#cbd5e1"
+        rx={3}
+      />
+      <rect x={0} y={8} width={tireW} height={26} fill={lc} rx={3} />
+      {isDbl && (
+        <rect
+          x={tireW + gap}
+          y={8}
+          width={tireW}
+          height={26}
+          fill={lc}
+          rx={3}
+        />
+      )}
+      <rect x={rightX} y={8} width={tireW} height={26} fill={rc} rx={3} />
+      {isDbl && (
+        <rect
+          x={rightX + tireW + gap}
+          y={8}
+          width={tireW}
+          height={26}
+          fill={rc}
+          rx={3}
+        />
+      )}
+      <text
+        x={isDbl ? tireW + 2 : tireW / 2}
+        y={44}
+        textAnchor="middle"
+        fontSize="8"
+        fill="#64748b"
+      >
+        ESQ
+      </text>
+      <text
+        x={isDbl ? rightX + tireW + 2 : rightX + tireW / 2}
+        y={44}
+        textAnchor="middle"
+        fontSize="8"
+        fill="#64748b"
+      >
+        DIR
+      </text>
+    </svg>
+  );
+};
+
+// ─── Photo button with camera capture ─────────────────────────────────────────
+const PhotoButton = ({ label, fieldName, preview, onChange }: any) => (
+  <label className="flex flex-col items-center gap-1 cursor-pointer select-none">
+    <div
+      className={`w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden border-2 transition-colors ${
+        preview
+          ? "border-green-400 bg-green-50"
+          : "border-dashed border-gray-300 bg-gray-50"
+      }`}
+    >
+      {preview ? (
+        <img src={preview} alt="" className="w-full h-full object-cover" />
+      ) : (
+        <Camera className="w-6 h-6 text-gray-400" />
+      )}
+    </div>
+    <span className="text-xs font-medium text-gray-600">{label}</span>
+    {preview && <CheckCircle className="w-3 h-3 text-green-500" />}
+    <input
+      type="file"
+      accept="image/*"
+      capture="environment"
+      className="hidden"
+      onChange={(e) => {
+        const f = e.target.files?.[0];
+        if (f) onChange(fieldName, f);
+      }}
+    />
+  </label>
+);
+
+// ─── Main Component ─────────────────────────────────────────────────────────────
 const ChecklistPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [truck, setTruck] = useState<any>(null);
 
-  // Form states
   const [overallCondition, setOverallCondition] = useState("BOM");
   const [tiresCondition, setTiresCondition] = useState("BOM");
   const [cabinCondition, setCabinCondition] = useState("BOM");
   const [canvasCondition, setCanvasCondition] = useState("BOM");
-
   const [notes, setNotes] = useState("");
-  const [cabinFile, setCabinFile] = useState<File | null>(null);
-  const [tiresFile, setTiresFile] = useState<File | null>(null);
-  const [canvasFile, setCanvasFile] = useState<File | null>(null);
+
+  const [photoFiles, setPhotoFiles] = useState<Record<string, File>>({});
+  const [photoPreviews, setPhotoPreviews] = useState<Record<string, string>>(
+    {},
+  );
+
+  const handlePhotoChange = useCallback((fieldName: string, file: File) => {
+    setPhotoFiles((prev) => ({ ...prev, [fieldName]: file }));
+    setPhotoPreviews((prev) => ({
+      ...prev,
+      [fieldName]: URL.createObjectURL(file),
+    }));
+  }, []);
 
   useEffect(() => {
     const loadTruck = async () => {
@@ -35,225 +146,359 @@ const ChecklistPage: React.FC = () => {
           return;
         }
         setTruck(stats.truck);
-      } catch (error) {
-        console.error("Erro ao carregar caminhão", error);
+      } catch {
         toast.error("Erro ao verificar caminhão.");
       }
     };
     loadTruck();
   }, [navigate]);
 
+  const axles = truck?.vehicleType
+    ? (VEHICLE_AXLES[truck.vehicleType as keyof typeof VEHICLE_AXLES] ?? [])
+    : [];
+
+  // Group axles by section
+  const axleSections = axles.reduce<{ section: string; axles: any[] }[]>(
+    (acc, axle: any) => {
+      const sname = (axle as any).section || "Veículo";
+      const found = acc.find((s) => s.section === sname);
+      if (found) found.axles.push(axle);
+      else acc.push({ section: sname, axles: [axle] });
+      return acc;
+    },
+    [],
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!truck) return;
     setLoading(true);
-
     try {
-      // 1. Upload photos if any
-      let photosData: any = {};
+      // Upload all photos
       const formData = new FormData();
       let hasFiles = false;
-
-      if (cabinFile) {
-        formData.append("cabinPhoto", cabinFile);
-        hasFiles = true;
-      }
-      if (tiresFile) {
-        formData.append("tiresPhoto", tiresFile);
-        hasFiles = true;
-      }
-      if (canvasFile) {
-        formData.append("canvasPhoto", canvasFile);
+      for (const [fn, file] of Object.entries(photoFiles)) {
+        formData.append(fn, file);
         hasFiles = true;
       }
 
+      let photoUrls: Record<string, string> = {};
       if (hasFiles) {
-        const uploadRes = await checklistService.uploadPhotos(formData);
-        photosData = uploadRes.photoUrls || {};
+        const res = await checklistService.uploadPhotos(formData);
+        photoUrls = res.photoUrls || {};
       }
 
-      // 2. Create Checklist
-      const checklistData = {
+      // Build checklistPhotos
+      const checklistPhotos: any[] = [];
+      if (photoUrls["cabinPhoto"])
+        checklistPhotos.push({
+          category: "CABINE",
+          photoUrl: photoUrls["cabinPhoto"],
+        });
+      if (photoUrls["canvasPhoto"])
+        checklistPhotos.push({
+          category: "LONA",
+          photoUrl: photoUrls["canvasPhoto"],
+        });
+      for (const axle of axles as any[]) {
+        const n = axle.axleNumber;
+        if (photoUrls[`axle_${n}_esq`])
+          checklistPhotos.push({
+            category: "EIXO",
+            axleNumber: n,
+            side: "ESQ",
+            photoUrl: photoUrls[`axle_${n}_esq`],
+          });
+        if (photoUrls[`axle_${n}_dir`])
+          checklistPhotos.push({
+            category: "EIXO",
+            axleNumber: n,
+            side: "DIR",
+            photoUrl: photoUrls[`axle_${n}_dir`],
+          });
+      }
+
+      await checklistService.create({
         truckId: truck.id,
         overallCondition,
         tiresCondition,
         cabinCondition,
         canvasCondition,
         notes,
-        ...photosData,
-      };
+        checklistPhotos: JSON.stringify(checklistPhotos),
+      });
 
-      await checklistService.create(checklistData);
       toast.success("Checklist enviado com sucesso!");
       navigate("/motorista");
     } catch (error: any) {
-      console.error("Erro ao enviar checklist:", error);
-      const msg = error.response?.data?.error || "Erro ao enviar checklist.";
-      toast.error(msg);
+      toast.error(error.response?.data?.error || "Erro ao enviar checklist.");
     } finally {
       setLoading(false);
     }
   };
 
+  const totalRequired = 2 + axles.length * 2;
+  const totalDone = Object.keys(photoFiles).length;
+  const pct = Math.round((totalDone / Math.max(totalRequired, 1)) * 100);
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4 pb-20">
-      <header className="flex items-center mb-6">
+    <div className="min-h-screen bg-gray-50 pb-24">
+      {/* Header */}
+      <header className="bg-white shadow-sm sticky top-0 z-10 flex items-center px-4 py-3 gap-3">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 mr-2 text-gray-600 hover:bg-gray-200 rounded-full"
+          className="p-2 text-gray-600 hover:bg-gray-100 rounded-full"
         >
-          <ArrowLeft className="w-6 h-6" />
+          <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-xl font-bold text-gray-800">Novo Checklist</h1>
+        <div className="flex-1">
+          <h1 className="text-lg font-bold text-gray-800">Novo Checklist</h1>
+          {truck && (
+            <p className="text-xs text-gray-500">
+              {truck.plate} · {truck.brand} {truck.model}
+            </p>
+          )}
+        </div>
+        {truck && (
+          <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+            {totalDone}/{totalRequired} fotos
+          </span>
+        )}
       </header>
 
+      {/* Truck banner */}
       {truck && (
-        <div className="bg-blue-600 text-white p-4 rounded-xl mb-6 shadow-sm">
-          <p className="text-sm text-blue-100">Caminhão</p>
-          <p className="text-2xl font-bold">{truck.plate}</p>
-          <p className="text-sm">
-            {truck.brand} {truck.model}
-          </p>
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white mx-4 mt-4 p-4 rounded-2xl shadow">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-xs text-blue-200 uppercase tracking-wide">
+                Veículo
+              </p>
+              <p className="text-3xl font-bold tracking-wider">{truck.plate}</p>
+              <p className="text-sm text-blue-100 mt-0.5">
+                {truck.brand} {truck.model}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-blue-200">Tipo</p>
+              <p className="text-sm font-semibold text-white">
+                {truck.vehicleType
+                  ? (
+                      VEHICLE_TYPE_LABELS[
+                        truck.vehicleType as keyof typeof VEHICLE_TYPE_LABELS
+                      ] ?? truck.vehicleType
+                    ).split(" (")[0]
+                  : "—"}
+              </p>
+              <p className="text-xs text-blue-300 mt-0.5">
+                {axles.length} eixos
+              </p>
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="flex justify-between text-xs text-blue-200 mb-1">
+              <span>Progresso das fotos</span>
+              <span>{pct}%</span>
+            </div>
+            <div className="w-full bg-blue-500 rounded-full h-1.5">
+              <div
+                className="bg-white h-1.5 rounded-full transition-all"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          </div>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Condição Pneus
-            </label>
-            <select
-              value={tiresCondition}
-              onChange={(e) => setTiresCondition(e.target.value)}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none"
-            >
-              <option value="BOM">Bom</option>
-              <option value="REGULAR">Regular</option>
-              <option value="RUIM">Ruim</option>
-            </select>
+      <form onSubmit={handleSubmit} className="space-y-4 mt-4 px-4">
+        {/* Condições Gerais */}
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <h2 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide">
+            Condições Gerais
+          </h2>
+          <div className="space-y-3">
+            {[
+              {
+                label: "Condição Pneus",
+                v: tiresCondition,
+                set: setTiresCondition,
+              },
+              {
+                label: "Condição Cabine",
+                v: cabinCondition,
+                set: setCabinCondition,
+              },
+              {
+                label: "Condição Lona/Baú",
+                v: canvasCondition,
+                set: setCanvasCondition,
+                opts: [
+                  { value: "BOM", label: "Bom" },
+                  { value: "REGULAR", label: "Regular" },
+                  { value: "RASGADO", label: "Rasgado/Danificado" },
+                ],
+              },
+              {
+                label: "Avaliação Geral",
+                v: overallCondition,
+                set: setOverallCondition,
+              },
+            ].map(({ label, v, set, opts }: any) => (
+              <div key={label}>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  {label}
+                </label>
+                <select
+                  value={v}
+                  onChange={(e) => set(e.target.value)}
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+                >
+                  {(
+                    opts || [
+                      { value: "BOM", label: "Bom" },
+                      { value: "REGULAR", label: "Regular" },
+                      { value: "RUIM", label: "Ruim / Problema" },
+                    ]
+                  ).map((o: any) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Condição Cabine
-            </label>
-            <select
-              value={cabinCondition}
-              onChange={(e) => setCabinCondition(e.target.value)}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none"
-            >
-              <option value="BOM">Bom</option>
-              <option value="REGULAR">Regular</option>
-              <option value="RUIM">Ruim</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Condição Lona/Baú
-            </label>
-            <select
-              value={canvasCondition}
-              onChange={(e) => setCanvasCondition(e.target.value)}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none"
-            >
-              <option value="BOM">Bom</option>
-              <option value="REGULAR">Regular</option>
-              <option value="RASGADO">Rasgado/Danificado</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Avaliação Geral
-            </label>
-            <select
-              value={overallCondition}
-              onChange={(e) => setOverallCondition(e.target.value)}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="BOM">Bom</option>
-              <option value="REGULAR">Regular - Precisa de Atenção</option>
-              <option value="RUIM">Ruim - Problemas Críticos</option>
-            </select>
-          </div>
-        </div>
+        </section>
 
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <label className="block text-sm font-medium text-gray-700 mb-4">
-            Fotos (Opcional)
-          </label>
-
-          <div className="grid grid-cols-1 gap-4">
-            <FileInput label="Foto da Cabine" onChange={setCabinFile} />
-            <FileInput label="Foto dos Pneus" onChange={setTiresFile} />
-            <FileInput label="Foto da Lona/Baú" onChange={setCanvasFile} />
+        {/* Fotos Gerais */}
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <h2 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide">
+            Fotos Gerais
+          </h2>
+          <div className="flex gap-6 justify-center py-2">
+            <PhotoButton
+              label="Cabine"
+              fieldName="cabinPhoto"
+              preview={photoPreviews["cabinPhoto"] ?? null}
+              onChange={handlePhotoChange}
+            />
+            <PhotoButton
+              label="Lona / Baú"
+              fieldName="canvasPhoto"
+              preview={photoPreviews["canvasPhoto"] ?? null}
+              onChange={handlePhotoChange}
+            />
           </div>
-        </div>
+        </section>
 
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+        {/* Fotos por Eixo */}
+        {axles.length > 0 && (
+          <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                Eixos
+              </h2>
+              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                {axles.length} eixos
+              </span>
+            </div>
+
+            {axleSections.map(({ section, axles: sa }) => (
+              <div key={section} className="mb-5">
+                {axleSections.length > 1 && (
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 border-b pb-1">
+                    {section}
+                  </p>
+                )}
+                <div className="space-y-4">
+                  {sa.map((axle: any) => {
+                    const n = axle.axleNumber;
+                    const lk = `axle_${n}_esq`,
+                      rk = `axle_${n}_dir`;
+                    const ld = !!photoFiles[lk],
+                      rd = !!photoFiles[rk];
+                    return (
+                      <div
+                        key={n}
+                        className={`border rounded-2xl p-4 transition-colors ${
+                          ld && rd
+                            ? "border-green-300 bg-green-50"
+                            : ld || rd
+                              ? "border-yellow-300 bg-yellow-50"
+                              : "border-gray-200 bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center mb-2">
+                          <div>
+                            <p className="text-sm font-bold text-gray-800">
+                              {axle.label}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {axle.tiresPerSide === "double"
+                                ? "4 pneus (duplos)"
+                                : "2 pneus (simples)"}
+                            </p>
+                          </div>
+                          {ld && rd ? (
+                            <CheckCircle className="w-5 h-5 text-green-500" />
+                          ) : (
+                            <AlertTriangle className="w-5 h-5 text-gray-300" />
+                          )}
+                        </div>
+                        <div className="mb-4 px-2">
+                          <AxleDiagram
+                            config={axle}
+                            leftDone={ld}
+                            rightDone={rd}
+                          />
+                        </div>
+                        <div className="flex gap-4 justify-center">
+                          <PhotoButton
+                            label="Lado Esq."
+                            fieldName={lk}
+                            preview={photoPreviews[lk] ?? null}
+                            onChange={handlePhotoChange}
+                          />
+                          <PhotoButton
+                            label="Lado Dir."
+                            fieldName={rk}
+                            preview={photoPreviews[rk] ?? null}
+                            onChange={handlePhotoChange}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {/* Observações */}
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">
             Observações
           </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-32"
+            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm h-28 resize-none"
             placeholder="Descreva qualquer detalhe importante..."
           />
-        </div>
+        </section>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 disabled:opacity-50"
+          className="w-full bg-green-600 hover:bg-green-700 active:scale-95 text-white font-bold py-4 rounded-2xl shadow-lg transition-all disabled:opacity-50 text-base"
         >
-          {loading ? "Enviando..." : "Finalizar Checklist"}
+          {loading
+            ? "Enviando..."
+            : `Finalizar Checklist${totalDone > 0 ? ` (${totalDone} fotos)` : ""}`}
         </button>
       </form>
     </div>
-  );
-};
-
-const FileInput: React.FC<{
-  label: string;
-  onChange: (file: File | null) => void;
-}> = ({ label, onChange }) => {
-  const [preview, setPreview] = useState<string | null>(null);
-
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onChange(file);
-      setPreview(URL.createObjectURL(file));
-    }
-  };
-
-  return (
-    <label className="flex items-center gap-4 p-3 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-      <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
-        {preview ? (
-          <img
-            src={preview}
-            alt="Preview"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <Camera className="w-6 h-6 text-gray-400" />
-        )}
-      </div>
-      <div className="flex-1">
-        <span className="text-sm font-medium text-gray-700">{label}</span>
-        <p className="text-xs text-gray-500">
-          {preview ? "Foto selecionada" : "Toque para adicionar"}
-        </p>
-      </div>
-      <input
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={handleFile}
-      />
-    </label>
   );
 };
 

@@ -1,91 +1,43 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "../lib/prisma";
 
 export const dashboardController = {
   async getAdminStats(req: Request, res: Response) {
     try {
-      // 1. Contagem de caminhões ativos
-      const activeTrucksCount = await prisma.truck.count({
-        where: {
-          status: "ATIVO",
-        },
-      });
-
-      // 2. Contagem de motoristas
-      const driversCount = await prisma.user.count({
-        where: {
-          role: "MOTORISTA",
-          active: true,
-        },
-      });
-
-      const availableDriversCount = await prisma.user.count({
-        where: {
-          role: "MOTORISTA",
-          active: true,
-          // Assumindo que motoristas sem caminhão atribuído estão disponíveis?
-          // Ou talvez precisemos de um status explícito no User, mas por enquanto vamos contar todos ativos
-          // Se houver lógica de "em viagem", seria aqui.
-          // Para simplificar, vamos considerar "disponíveis" aqueles que não têm checklist em aberto hoje?
-          // Por enquanto, vou retornar apenas o total de ativos.
-        },
-      });
-
-      // 3. Ocorrências pendentes
-      const pendingOccurrencesCount = await prisma.occurrence.count({
-        where: {
-          status: {
-            in: ["PENDENTE", "EM_ANALISE"],
+      const [
+        activeTrucksCount,
+        driversCount,
+        pendingOccurrencesCount,
+        recentActivities,
+        recentChecklists,
+      ] = await Promise.all([
+        prisma.truck.count({ where: { status: "ATIVO" } }),
+        prisma.user.count({ where: { role: "MOTORISTA", active: true } }),
+        prisma.occurrence.count({
+          where: { status: { in: ["PENDENTE", "EM_ANALISE"] } },
+        }),
+        prisma.occurrence.findMany({
+          take: 5,
+          orderBy: { createdAt: "desc" },
+          include: {
+            truck: { select: { plate: true } },
+            driver: { select: { name: true } },
           },
-        },
-      });
-
-      // 4. Últimas atividades (Ocorrências recentes)
-      const recentActivities = await prisma.occurrence.findMany({
-        take: 5,
-        orderBy: {
-          createdAt: "desc",
-        },
-        include: {
-          truck: {
-            select: { plate: true },
+        }),
+        prisma.dailyChecklist.findMany({
+          take: 5,
+          orderBy: { createdAt: "desc" },
+          include: {
+            truck: { select: { plate: true } },
+            driver: { select: { name: true } },
           },
-          driver: {
-            select: { name: true },
-          },
-        },
-      });
-
-      // 5. Checklists recentes
-      const recentChecklists = await prisma.dailyChecklist.findMany({
-        take: 5,
-        orderBy: {
-          createdAt: "desc",
-        },
-        include: {
-          truck: {
-            select: { plate: true },
-          },
-          driver: {
-            select: { name: true },
-          },
-        },
-      });
+        }),
+      ]);
 
       res.json({
-        trucks: {
-          active: activeTrucksCount,
-          // total: await prisma.truck.count(), // Se precisar do total geral
-        },
-        drivers: {
-          total: driversCount,
-          available: availableDriversCount, // Placeholder
-        },
-        occurrences: {
-          pending: pendingOccurrencesCount,
-        },
+        trucks: { active: activeTrucksCount },
+        drivers: { total: driversCount },
+        occurrences: { pending: pendingOccurrencesCount },
         recentActivity: recentActivities.map((occ) => ({
           type: "OCCURRENCE",
           id: occ.id,
@@ -117,73 +69,44 @@ export const dashboardController = {
     }
   },
 
-  // Motorista Dashboard Stats
   async getDriverStats(req: Request, res: Response) {
     try {
-      const userId = (req as any).user?.id; // Assumindo que o middleware de auth coloca o user no req
-
+      const userId = (req as any).user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Usuário não autenticado" });
       }
 
-      // 1. Caminhão atribuído
-      const driverTrucks = await prisma.truck.findFirst({
-        where: {
-          currentDriverId: userId,
-        },
-      });
-
-      // 2. Último checklist feito por este motorista
-      const lastChecklist = await prisma.dailyChecklist.findFirst({
-        where: {
-          driverId: userId,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        include: {
-          truck: {
-            select: { plate: true, model: true },
-          },
-        },
-      });
-
-      // 3. Ocorrências recentes deste motorista
-      const recentOccurrences = await prisma.occurrence.findMany({
-        where: {
-          driverId: userId,
-        },
-        take: 5,
-        orderBy: {
-          createdAt: "desc",
-        },
-        include: {
-          truck: {
-            select: { plate: true },
-          },
-        },
-      });
-
-      // 4. Viagens do mês
       const currentMonthStart = new Date();
       currentMonthStart.setDate(1);
+      currentMonthStart.setHours(0, 0, 0, 0);
 
-      const tripsThisMonth = await prisma.dailyChecklist.count({
-        where: {
-          driverId: userId,
-          createdAt: {
-            gte: currentMonthStart,
-          },
-        },
-      });
+      const [driverTruck, lastChecklist, recentOccurrences, tripsThisMonth] =
+        await Promise.all([
+          prisma.truck.findFirst({ where: { currentDriverId: userId } }),
+          prisma.dailyChecklist.findFirst({
+            where: { driverId: userId },
+            orderBy: { createdAt: "desc" },
+            include: { truck: { select: { plate: true, model: true } } },
+          }),
+          prisma.occurrence.findMany({
+            where: { driverId: userId },
+            take: 5,
+            orderBy: { createdAt: "desc" },
+            include: { truck: { select: { plate: true } } },
+          }),
+          prisma.dailyChecklist.count({
+            where: { driverId: userId, createdAt: { gte: currentMonthStart } },
+          }),
+        ]);
 
       res.json({
-        truck: driverTrucks
+        truck: driverTruck
           ? {
-              id: driverTrucks.id,
-              plate: driverTrucks.plate,
-              model: driverTrucks.model,
-              brand: driverTrucks.brand,
+              id: driverTruck.id,
+              plate: driverTruck.plate,
+              model: driverTruck.model,
+              brand: driverTruck.brand,
+              vehicleType: driverTruck.vehicleType,
             }
           : null,
         lastChecklist: lastChecklist

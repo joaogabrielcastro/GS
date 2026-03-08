@@ -1,105 +1,85 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { prisma } from "../lib/prisma";
 
-const prisma = new PrismaClient();
+// ─── Helper interno — cria usuário com role controlada ────────────────────────
+async function createUserInternal(data: {
+  email: string;
+  password: string;
+  name: string;
+  cpf?: string;
+  phone?: string;
+  role: string;
+}) {
+  const existingUser = await prisma.user.findUnique({
+    where: { email: data.email },
+  });
+  if (existingUser)
+    throw Object.assign(new Error("Email já cadastrado"), { statusCode: 409 });
+
+  const hashedPassword = await bcrypt.hash(data.password, 10);
+  return prisma.user.create({
+    data: {
+      email: data.email,
+      password: hashedPassword,
+      name: data.name,
+      cpf: data.cpf,
+      phone: data.phone,
+      role: data.role as any,
+    },
+    select: { id: true, email: true, name: true, role: true, createdAt: true },
+  });
+}
 
 export const authController = {
-  // Registro de usuário
+  // Registro público — role sempre MOTORISTA (segurança)
   async register(req: Request, res: Response) {
     try {
-      const { email, password, name, cpf, phone, role } = req.body;
-
-      // Validação básica
-      if (!email || !password || !name || !role) {
+      const { email, password, name, cpf, phone } = req.body;
+      if (!email || !password || !name) {
         return res.status(400).json({ error: "Campos obrigatórios faltando" });
       }
-
-      // Verificar se usuário já existe
-      const existingUser = await prisma.user.findUnique({
-        where: { email },
+      const user = await createUserInternal({
+        email,
+        password,
+        name,
+        cpf,
+        phone,
+        role: "MOTORISTA",
       });
-
-      if (existingUser) {
-        return res.status(409).json({ error: "Email já cadastrado" });
-      }
-
-      // Hash da senha
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Criar usuário
-      const user = await prisma.user.create({
-        data: {
-          email,
-          password: hashedPassword,
-          name,
-          cpf,
-          phone,
-          role,
-        },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          createdAt: true,
-        },
-      });
-
       return res
         .status(201)
         .json({ message: "Usuário criado com sucesso", user });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.statusCode === 409)
+        return res.status(409).json({ error: error.message });
       console.error("Erro no registro:", error);
       return res.status(500).json({ error: "Erro ao criar usuário" });
     }
   },
-  // Criar usuário (Admin)
+
+  // Criar usuário (Admin) — aceita qualquer role
   async createUser(req: Request, res: Response) {
     try {
       const { email, password, name, cpf, phone, role } = req.body;
-
-      // Validação básica
       if (!email || !password || !name || !role) {
         return res.status(400).json({ error: "Campos obrigatórios faltando" });
       }
-
-      // Verificar se usuário já existe
-      const existingUser = await prisma.user.findUnique({
-        where: { email },
+      const user = await createUserInternal({
+        email,
+        password,
+        name,
+        cpf,
+        phone,
+        role,
       });
-
-      if (existingUser) {
-        return res.status(409).json({ error: "Email já cadastrado" });
-      }
-
-      // Hash da senha
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Criar usuário
-      const user = await prisma.user.create({
-        data: {
-          email,
-          password: hashedPassword,
-          name,
-          cpf,
-          phone,
-          role,
-        },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          createdAt: true,
-        },
-      });
-
       return res
         .status(201)
         .json({ message: "Usuário criado com sucesso", user });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.statusCode === 409)
+        return res.status(409).json({ error: error.message });
       console.error(error);
       return res.status(500).json({ error: "Erro ao criar usuário" });
     }

@@ -81,12 +81,12 @@ async function main() {
       brand: "Volvo",
       model: "FH 540",
       year: 2022,
+      vehicleType: "TRUCK",
       totalKm: 150000,
       status: "ATIVO",
       acquisitionDate: new Date("2022-01-15"),
       notes: "Caminhão principal da frota",
       currentDriver: {
-        // Fixed: drivers -> currentDriver
         connect: { id: motorista.id },
       },
     },
@@ -100,6 +100,7 @@ async function main() {
       brand: "Scania",
       model: "R 450",
       year: 2021,
+      vehicleType: "CARRETA_LS",
       totalKm: 280000,
       status: "MANUTENCAO",
       acquisitionDate: new Date("2021-05-20"),
@@ -115,11 +116,11 @@ async function main() {
       brand: "Mercedes-Benz",
       model: "Actros 2651",
       year: 2023,
+      vehicleType: "TOCO",
       totalKm: 50000,
       status: "ATIVO",
       acquisitionDate: new Date("2023-01-10"),
       notes: "Caminhão disponível para operações",
-      currentDriver: undefined, // Sem motorista atribuído
     },
   });
 

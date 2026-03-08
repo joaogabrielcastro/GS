@@ -35,10 +35,9 @@ api.interceptors.response.use(
       try {
         const refreshToken = localStorage.getItem("refreshToken");
         if (refreshToken) {
-          const response = await axios.post("/api/auth/refresh-token", {
+          const response = await api.post("/auth/refresh-token", {
             refreshToken,
           });
-
           const { token } = response.data;
           localStorage.setItem("token", token);
 
@@ -75,10 +74,26 @@ export const authService = {
   },
 };
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export const truckService = {
-  list: async () => {
+  list: async (opts?: { page?: number; limit?: number; status?: string }) => {
+    const params: Record<string, string> = {};
+    if (opts?.page) params.page = String(opts.page);
+    if (opts?.limit) params.limit = String(opts.limit);
+    if (opts?.status) params.status = opts.status;
+    const response = await api.get("/trucks", { params });
+    return response.data as PaginatedResponse<any>;
+  },
+  listAll: async () => {
     const response = await api.get("/trucks");
-    return response.data;
+    return response.data as any[];
   },
   create: async (data: any) => {
     const response = await api.post("/trucks", data);
@@ -149,19 +164,35 @@ export const occurrenceService = {
 
 export const tireService = {
   list: async (
-    filters: { truckId?: string; status?: string; active?: boolean } = {},
+    filters: {
+      truckId?: string;
+      status?: string;
+      active?: boolean;
+      page?: number;
+      limit?: number;
+    } = {},
   ) => {
     const params = new URLSearchParams();
     if (filters.truckId) params.append("truckId", filters.truckId);
     if (filters.status) params.append("status", filters.status);
     if (filters.active !== undefined)
       params.append("active", String(filters.active));
+    if (filters.page) params.append("page", String(filters.page));
+    if (filters.limit) params.append("limit", String(filters.limit));
 
     const response = await api.get(`/tires?${params.toString()}`);
-    return response.data;
+    return response.data as PaginatedResponse<any>;
   },
   create: async (data: any) => {
     const response = await api.post("/tires", data);
+    return response.data;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.put(`/tires/${id}`, data);
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await api.get(`/tires/${id}`);
     return response.data;
   },
   getStatistics: async (truckId?: string) => {

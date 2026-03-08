@@ -4,7 +4,13 @@ import { LogOut, Truck, ClipboardCheck, AlertCircle, Bell } from "lucide-react";
 import socketService from "@/services/socket";
 import toast from "react-hot-toast";
 import { dashboardService, DriverStats } from "@/services/dashboardService";
-import { truckService } from "@/services/api"; // Importando serviço de caminhões
+import { truckService } from "@/services/api";
+import {
+  OCCURRENCE_STATUS_LABELS,
+  OCCURRENCE_TYPE_LABELS,
+  type OccurrenceStatus,
+  type OccurrenceType,
+} from "@/types";
 import { Link } from "react-router-dom";
 
 const DashboardMotorista: React.FC = () => {
@@ -289,12 +295,16 @@ const DashboardMotorista: React.FC = () => {
                     </div>
                     <div className="flex-1">
                       <h4 className="font-semibold text-gray-900 text-sm">
-                        Ocorrência: {occ.type.replace("_", " ")}
+                        Ocorrência:{" "}
+                        {OCCURRENCE_TYPE_LABELS[occ.type as OccurrenceType] ??
+                          occ.type.replace("_", " ")}
                       </h4>
                       <p className="text-xs text-gray-500">
-                        {new Date(occ.date).toLocaleDateString()} -{" "}
+                        {new Date(occ.date).toLocaleDateString()} —{" "}
                         <span className="uppercase text-xs font-bold">
-                          {occ.status}
+                          {OCCURRENCE_STATUS_LABELS[
+                            occ.status as OccurrenceStatus
+                          ] ?? occ.status}
                         </span>
                       </p>
                     </div>

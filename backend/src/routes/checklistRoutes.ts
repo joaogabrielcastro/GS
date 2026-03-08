@@ -1,7 +1,7 @@
-import { Router } from 'express';
-import { checklistController } from '../controllers/checklistController';
-import { authenticate, authorize } from '../middleware/auth';
-import { upload } from '../middleware/upload';
+import { Router } from "express";
+import { checklistController } from "../controllers/checklistController";
+import { authenticate, authorize } from "../middleware/auth";
+import { upload } from "../middleware/upload";
 
 const router = Router();
 
@@ -9,18 +9,14 @@ const router = Router();
 router.use(authenticate);
 
 router.post(
-  '/upload-photos',
-  authorize('MOTORISTA'),
-  upload.fields([
-    { name: 'cabinPhoto', maxCount: 1 },
-    { name: 'tiresPhoto', maxCount: 1 },
-    { name: 'canvasPhoto', maxCount: 1 },
-  ]),
-  checklistController.uploadPhotos
+  "/upload-photos",
+  authorize("MOTORISTA"),
+  upload.any(), // Aceita qualquer campo: cabinPhoto, axle_1_esq, axle_2_dir, etc.
+  checklistController.uploadPhotos,
 );
 
-router.post('/', authorize('MOTORISTA'), checklistController.create);
-router.get('/', checklistController.list);
-router.get('/:id', checklistController.getById);
+router.post("/", authorize("MOTORISTA"), checklistController.create);
+router.get("/", checklistController.list);
+router.get("/:id", checklistController.getById);
 
 export default router;

@@ -1,7 +1,5 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "../lib/prisma";
 
 export const checklistController = {
   // Criar checklist diário
@@ -21,9 +19,10 @@ export const checklistController = {
         location,
         latitude,
         longitude,
-      } = req.body; // Receive new fields
+        // Array of {category, axleNumber?, side?, photoUrl, notes?}
+        checklistPhotos,
+      } = req.body;
 
-      // Verificar se o caminhão existe
       const truck = await prisma.truck.findUnique({
         where: { id: truckId },
       });
@@ -32,7 +31,6 @@ export const checklistController = {
         return res.status(404).json({ error: "Caminhão não encontrado" });
       }
 
-      // Verificar se já existe checklist hoje
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
@@ -40,9 +38,7 @@ export const checklistController = {
         where: {
           truckId,
           driverId,
-          date: {
-            gte: today,
-          },
+          date: { gte: today },
         },
       });
 
@@ -52,25 +48,57 @@ export const checklistController = {
         });
       }
 
+      // Parse checklistPhotos if it came as a JSON string
+      let photos: any[] = [];
+      if (checklistPhotos) {
+        try {
+          photos =
+            typeof checklistPhotos === "string"
+              ? JSON.parse(checklistPhotos)
+              : checklistPhotos;
+        } catch {
+          photos = [];
+        }
+      }
+
+      // Add legacy single photos as ChecklistPhoto records too
+      if (cabinPhotoUrl)
+        photos.push({ category: "CABINE", photoUrl: cabinPhotoUrl });
+      if (tiresPhotoUrl)
+        photos.push({ category: "PNEU", photoUrl: tiresPhotoUrl });
+      if (canvasPhotoUrl)
+        photos.push({ category: "LONA", photoUrl: canvasPhotoUrl });
+
       const checklist = await prisma.dailyChecklist.create({
         data: {
           truckId,
           driverId,
-          cabinPhotoUrl,
-          tiresPhotoUrl,
-          canvasPhotoUrl,
           overallCondition,
           tiresCondition,
           cabinCondition,
           canvasCondition,
           notes,
           location,
-          latitude,
-          longitude,
+          latitude: latitude ? parseFloat(latitude) : undefined,
+          longitude: longitude ? parseFloat(longitude) : undefined,
+          photos:
+            photos.length > 0
+              ? {
+                  createMany: {
+                    data: photos.map((p: any) => ({
+                      category: p.category,
+                      axleNumber: p.axleNumber ? parseInt(p.axleNumber) : null,
+                      side: p.side || null,
+                      photoUrl: p.photoUrl,
+                      notes: p.notes || null,
+                    })),
+                  },
+                }
+              : undefined,
         },
+        include: { photos: true },
       });
 
-      // Se houver algum problema, criar uma notificação para os admins
       const hasIssues =
         tiresCondition === "RUIM" ||
         cabinCondition === "RUIM" ||
@@ -78,21 +106,17 @@ export const checklistController = {
         overallCondition === "RUIM";
 
       if (hasIssues) {
-        // Buscar todos os admins
         const admins = await prisma.user.findMany({
           where: { role: "ADMINISTRADOR" },
         });
 
-        // Criar notificação
         const notification = await prisma.notification.create({
           data: {
             title: "Alerta de Checklist ⚠️",
             message: `Problemas reportados no caminhão ${truck.plate} pelo motorista.`,
-            occurrenceId: undefined, // Opcional
           },
         });
 
-        // Vincular notificação aos admins
         await prisma.notificationUser.createMany({
           data: admins.map((admin) => ({
             notificationId: notification.id,
@@ -170,15 +194,13 @@ export const checklistController = {
       const checklist = await prisma.dailyChecklist.findUnique({
         where: { id },
         include: {
-          truck: true,
-          driver: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              phone: true,
-            },
+          truck: {
+            include: { currentDriver: { select: { id: true, name: true } } },
           },
+          driver: {
+            select: { id: true, name: true, email: true, phone: true },
+          },
+          photos: { orderBy: { axleNumber: "asc" } },
         },
       });
 
@@ -192,23 +214,20 @@ export const checklistController = {
     }
   },
 
-  // Upload de fotos do checklist
+  // Upload de fotos do checklist (aceita qualquer campo: cabinPhoto, axle_1_esq, axle_2_dir, etc)
   async uploadPhotos(req: Request, res: Response) {
     try {
-      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      // upload.any() gives req.files as an array
+      const files = req.files as Express.Multer.File[];
 
-      const photoUrls: any = {};
-
-      if (files.cabinPhoto) {
-        photoUrls.cabinPhotoUrl = `/uploads/checklist/${files.cabinPhoto[0].filename}`;
+      if (!files || files.length === 0) {
+        return res.json({ message: "Nenhuma foto enviada", photoUrls: {} });
       }
 
-      if (files.tiresPhoto) {
-        photoUrls.tiresPhotoUrl = `/uploads/checklist/${files.tiresPhoto[0].filename}`;
-      }
+      const photoUrls: Record<string, string> = {};
 
-      if (files.canvasPhoto) {
-        photoUrls.canvasPhotoUrl = `/uploads/checklist/${files.canvasPhoto[0].filename}`;
+      for (const file of files) {
+        photoUrls[file.fieldname] = `/uploads/checklist/${file.filename}`;
       }
 
       return res.json({ message: "Fotos enviadas com sucesso", photoUrls });

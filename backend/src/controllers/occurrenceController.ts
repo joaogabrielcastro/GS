@@ -1,8 +1,7 @@
 import { Request, Response } from "express";
-import { PrismaClient, UserRole } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import { Server } from "socket.io";
-
-const prisma = new PrismaClient();
+import { prisma } from "../lib/prisma";
 
 // Variável de módulo para evitar perda de contexto do 'this'
 let socketIO: Server | null = null;
@@ -48,7 +47,7 @@ export const occurrenceController = {
           longitude,
           photoUrls: photoUrls || [],
           estimatedCost: estimatedCost ?? null,
-          hasFinalcialImpact:
+          hasFinancialImpact:
             estimatedCost != null ? true : hasFinalcialImpact || false,
         },
         include: {
@@ -300,7 +299,7 @@ export const occurrenceController = {
         total: occurrences.length,
         byType: {} as any,
         byStatus: {} as any,
-        withFinancialImpact: occurrences.filter((o) => o.hasFinalcialImpact)
+        withFinancialImpact: occurrences.filter((o) => o.hasFinancialImpact)
           .length,
         totalEstimatedCost: occurrences.reduce(
           (sum, o) => sum + Number(o.estimatedCost || 0),
