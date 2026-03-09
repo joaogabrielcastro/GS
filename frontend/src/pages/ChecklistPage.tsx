@@ -240,6 +240,7 @@ const ChecklistPage: React.FC = () => {
   const totalRequired = 2 + axles.length * 2;
   const totalDone = Object.keys(photoFiles).length;
   const pct = Math.round((totalDone / Math.max(totalRequired, 1)) * 100);
+  const allPhotosComplete = totalDone >= totalRequired;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
@@ -490,13 +491,26 @@ const ChecklistPage: React.FC = () => {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !allPhotosComplete}
           className="w-full bg-green-600 hover:bg-green-700 active:scale-95 text-white font-bold py-4 rounded-2xl shadow-lg transition-all disabled:opacity-50 text-base"
         >
           {loading
             ? "Enviando..."
-            : `Finalizar Checklist${totalDone > 0 ? ` (${totalDone} fotos)` : ""}`}
+            : !allPhotosComplete
+              ? `Tire todas as fotos (${totalDone}/${totalRequired})`
+              : `Finalizar Checklist (${totalDone} fotos)`}
         </button>
+
+        {!allPhotosComplete && (
+          <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-xl text-sm">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+            <p>
+              É necessário tirar todas as fotos antes de enviar o checklist.
+              Faltam <strong>{totalRequired - totalDone}</strong>{" "}
+              {totalRequired - totalDone === 1 ? "foto" : "fotos"}.
+            </p>
+          </div>
+        )}
       </form>
     </div>
   );
