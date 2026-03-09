@@ -176,6 +176,9 @@ export const checklistController = {
               email: true,
             },
           },
+          photos: {
+            orderBy: { axleNumber: "asc" },
+          },
         },
         orderBy: { date: "desc" },
       });
