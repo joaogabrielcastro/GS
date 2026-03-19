@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import { Server } from "socket.io";
 import { createServer } from "http";
 import rateLimit from "express-rate-limit";
-import path from "path";
+import cookieParser from "cookie-parser";
 
 // Importar rotas
 import authRoutes from "./routes/authRoutes";
@@ -15,10 +15,16 @@ import checklistRoutes from "./routes/checklistRoutes";
 import occurrenceRoutes from "./routes/occurrenceRoutes";
 import dashboardRoutes from "./routes/dashboardRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
+import fileRoutes from "./routes/fileRoutes";
 
 // Importar middleware
 import { errorHandler } from "./middleware/errorHandler";
 import { occurrenceController } from "./controllers/occurrenceController";
+import { requestLogger } from "./middleware/requestLogger";
+import { logger } from "./lib/logger";
+import { errorResponseNormalizer } from "./middleware/errorResponse";
+import { startRefreshTokenCleanupJob } from "./jobs/refreshTokenCleanup";
+import { successResponseWrapper } from "./middleware/successResponse";
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -38,15 +44,15 @@ const allowedOrigins: string[] = process.env.CORS_ORIGIN
 
 // Logar origens permitidas para facilitar depuração no deploy
 if (allowedOrigins.length === 0) {
-  console.log(
+  logger.warn(
     "CORS: allowedOrigins vazio — apenas localhost e requisições sem origin serão aceitas unless CORS_ORIGIN configured",
   );
 } else if (allowedOrigins.includes("*")) {
-  console.log(
+  logger.warn(
     "CORS: wildcard '*' ativo — aceitando todas as origens (reflete Origin no header)",
   );
 } else {
-  console.log("CORS: allowed origins:", allowedOrigins);
+  logger.info("CORS: allowed origins", { allowedOrigins });
 }
 const httpServer = createServer(app);
 
@@ -68,7 +74,7 @@ const io = new Server(httpServer, {
   cors: {
     origin: (origin, callback) => {
       if (isOriginAllowed(origin)) return callback(null, true);
-      console.warn(`CORS denied for origin: ${origin}`);
+      logger.warn("CORS denied for socket origin", { origin });
       return callback(null, false);
     },
     credentials: true,
@@ -90,7 +96,7 @@ app.use(
   cors({
     origin: (origin, callback) => {
       if (isOriginAllowed(origin)) return callback(null, true);
-      console.warn(`CORS denied for origin: ${origin}`);
+      logger.warn("CORS denied for origin", { origin });
       return callback(null, false);
     },
     credentials: true,
@@ -109,9 +115,10 @@ app.use("/api/", limiter);
 // Body parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Servir arquivos estáticos (uploads)
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use(cookieParser());
+app.use(requestLogger);
+app.use(errorResponseNormalizer);
+app.use(successResponseWrapper);
 
 // Rotas
 app.get("/api/health", (_req, res) => {
@@ -129,19 +136,20 @@ app.use("/api/checklists", checklistRoutes);
 app.use("/api/occurrences", occurrenceRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/files", fileRoutes);
 
 // Socket.IO - Gerenciamento de conexões
 io.on("connection", (socket) => {
-  console.log("Novo cliente conectado:", socket.id);
+  logger.info("Socket client connected", { socketId: socket.id });
 
   // Usuário se junta à sua "sala" pessoal para notificações
   socket.on("join", (userId: string) => {
     socket.join(`user_${userId}`);
-    console.log(`Usuário ${userId} entrou na sala`);
+    logger.info("User joined socket room", { userId, socketId: socket.id });
   });
 
   socket.on("disconnect", () => {
-    console.log("Cliente desconectado:", socket.id);
+    logger.info("Socket client disconnected", { socketId: socket.id });
   });
 });
 
@@ -152,19 +160,21 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 3000;
 
 httpServer.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  console.log(`📡 Socket.IO pronto para conexões`);
-  console.log(`🌐 API: http://localhost:${PORT}/api`);
-  console.log(`💚 Ambiente: ${process.env.NODE_ENV || "development"}`);
+  logger.info("Servidor iniciado", {
+    port: PORT,
+    apiUrl: `http://localhost:${PORT}/api`,
+    env: process.env.NODE_ENV || "development",
+  });
+  startRefreshTokenCleanupJob();
 });
 
 // Tratamento de erros não capturados
 process.on("unhandledRejection", (reason, _promise) => {
-  console.error("Unhandled Rejection:", reason);
+  logger.error("Unhandled Rejection", { reason: String(reason) });
 });
 
 process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error);
+  logger.error("Uncaught Exception", { error: error.message, stack: error.stack });
   process.exit(1);
 });
 

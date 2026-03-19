@@ -93,10 +93,26 @@ model User {
   checklists    DailyChecklist[]
   occurrences   Occurrence[]
   notifications NotificationUser[]
+  refreshTokens RefreshToken[]
   
   @@index([email])
   @@index([role])
   @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
 }
 
 model Truck {
@@ -200,6 +216,8 @@ model DailyChecklist {
   @@index([truckId])
   @@index([driverId])
   @@index([date])
+  @@index([driverId, date])
+  @@index([truckId, date])
   @@map("daily_checklists")
 }
 
@@ -252,6 +270,8 @@ model Occurrence {
   @@index([status])
   @@index([type])
   @@index([occurredAt])
+  @@index([driverId, occurredAt])
+  @@index([truckId, occurredAt])
   @@map("occurrences")
 }
 

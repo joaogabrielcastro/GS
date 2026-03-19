@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { logger } from "../lib/logger";
 
 export const dashboardController = {
   async getAdminStats(req: Request, res: Response) {
@@ -61,7 +62,10 @@ export const dashboardController = {
         })),
       });
     } catch (error) {
-      console.error("Erro ao buscar dados do dashboard:", error);
+      logger.error("Erro ao buscar dados do dashboard", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({
         error: "Erro ao buscar dados do dashboard",
         details: error instanceof Error ? error.message : String(error),
@@ -71,7 +75,7 @@ export const dashboardController = {
 
   async getDriverStats(req: Request, res: Response) {
     try {
-      const userId = (req as any).user?.id;
+      const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Usuário não autenticado" });
       }
@@ -129,7 +133,10 @@ export const dashboardController = {
         },
       });
     } catch (error) {
-      console.error("Erro ao buscar dados do dashboard do motorista:", error);
+      logger.error("Erro ao buscar dashboard do motorista", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return res
         .status(500)
         .json({ error: "Erro ao buscar dados do dashboard do motorista" });
@@ -152,48 +159,58 @@ export const dashboardController = {
         dateFilter = { gte: startOfYear };
       }
 
-      // 1. Custos de Ocorrências (Manutenção)
-      const occurrences = await prisma.occurrence.findMany({
+      // 1. Custos de Ocorrências (Manutenção) agregados no banco
+      const occurrenceAgg = await prisma.occurrence.aggregate({
         where: {
           status: "RESOLVIDO",
           actualCost: { not: null },
           resolvedAt: dateFilter,
         },
-        select: { actualCost: true },
+        _sum: { actualCost: true },
       });
 
-      const totalMaintenanceCost = occurrences.reduce((sum, occ) => {
-        return sum + (Number(occ.actualCost) || 0);
-      }, 0);
+      const totalMaintenanceCost = Number(occurrenceAgg._sum.actualCost || 0);
 
-      // 2. Custos de Pneus
-      const tireEvents = await prisma.tireEvent.findMany({
+      // 2. Custos de Pneus agregados no banco
+      const tireAgg = await prisma.tireEvent.aggregate({
         where: {
           cost: { not: null },
           createdAt: dateFilter,
         },
-        select: { cost: true },
+        _sum: { cost: true },
       });
 
-      const totalTireCost = tireEvents.reduce((sum, evt) => {
-        return sum + (Number(evt.cost) || 0);
-      }, 0);
+      const totalTireCost = Number(tireAgg._sum.cost || 0);
 
-      // 3. Resumo por Caminhão
-      const trucks = await prisma.truck.findMany({
-        include: {
-          occurrences: {
-            where: { actualCost: { not: null }, resolvedAt: dateFilter },
+      // 3. Resumo por Caminhão (top 5) com groupBy no banco
+      const groupedCosts = await prisma.occurrence.groupBy({
+        by: ["truckId"],
+        where: {
+          status: "RESOLVIDO",
+          actualCost: { not: null },
+          resolvedAt: dateFilter,
+        },
+        _sum: { actualCost: true },
+        orderBy: {
+          _sum: {
+            actualCost: "desc",
           },
         },
+        take: 5,
       });
 
-      const truckCosts = trucks
-        .map((truck) => {
-          const maintenance = truck.occurrences.reduce(
-            (acc, occ) => acc + (Number(occ.actualCost) || 0),
-            0,
-          );
+      const topTruckIds = groupedCosts.map((g) => g.truckId);
+      const trucks = await prisma.truck.findMany({
+        where: { id: { in: topTruckIds } },
+        select: { id: true, plate: true, model: true, totalKm: true },
+      });
+
+      const truckMap = new Map(trucks.map((t) => [t.id, t]));
+      const truckCosts = groupedCosts
+        .map((g) => {
+          const truck = truckMap.get(g.truckId);
+          if (!truck) return null;
+          const maintenance = Number(g._sum.actualCost || 0);
           return {
             plate: truck.plate,
             model: truck.model,
@@ -203,8 +220,17 @@ export const dashboardController = {
               truck.totalKm > 0 ? (maintenance / truck.totalKm).toFixed(2) : 0,
           };
         })
-        .sort((a, b) => b.totalCost - a.totalCost)
-        .slice(0, 5); // Top 5 mais custosos
+        .filter(
+          (
+            value,
+          ): value is {
+            plate: string;
+            model: string;
+            totalCost: number;
+            km: number;
+            costPerKm: string | number;
+          } => value !== null,
+        );
 
       res.json({
         totalMaintenance: totalMaintenanceCost,
@@ -213,7 +239,10 @@ export const dashboardController = {
         topCostTrucks: truckCosts,
       });
     } catch (error) {
-      console.error("Erro ao buscar dados financeiros:", error);
+      logger.error("Erro ao buscar dados financeiros", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return res
         .status(500)
         .json({ error: "Erro ao buscar dados financeiros" });

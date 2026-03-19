@@ -1,7 +1,9 @@
 import { Request, Response } from "express";
-import { UserRole } from "@prisma/client";
+import { OccurrenceStatus, OccurrenceType, Prisma, UserRole } from "@prisma/client";
 import { Server } from "socket.io";
 import { prisma } from "../lib/prisma";
+import { buildPrivateFileUrl } from "../lib/storage";
+import { logger } from "../lib/logger";
 
 // Variável de módulo para evitar perda de contexto do 'this'
 let socketIO: Server | null = null;
@@ -14,7 +16,10 @@ export const occurrenceController = {
   // Criar ocorrência
   async create(req: Request, res: Response) {
     try {
-      const driverId = (req as any).user.id;
+      const driverId = req.user?.id;
+      if (!driverId) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
       const {
         type,
         description,
@@ -24,7 +29,7 @@ export const occurrenceController = {
         longitude,
         photoUrls,
         estimatedCost,
-        hasFinalcialImpact,
+        hasFinancialImpact,
       } = req.body;
 
       // Verificar se o caminhão existe
@@ -48,7 +53,7 @@ export const occurrenceController = {
           photoUrls: photoUrls || [],
           estimatedCost: estimatedCost ?? null,
           hasFinancialImpact:
-            estimatedCost != null ? true : hasFinalcialImpact || false,
+            estimatedCost != null ? true : hasFinancialImpact || false,
         },
         include: {
           truck: {
@@ -73,7 +78,7 @@ export const occurrenceController = {
 
       // Se tiver impacto financeiro, notificar também o financeiro
       const roles: UserRole[] = ["ADMINISTRADOR"];
-      if (hasFinalcialImpact) {
+      if (hasFinancialImpact) {
         roles.push("FINANCEIRO");
       }
 
@@ -115,7 +120,10 @@ export const occurrenceController = {
         occurrence,
       });
     } catch (error) {
-      console.error("Erro ao criar ocorrência:", error);
+      logger.error("Erro ao criar ocorrência", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ error: "Erro ao registrar ocorrência" });
     }
   },
@@ -123,22 +131,44 @@ export const occurrenceController = {
   // Listar ocorrências
   async list(req: Request, res: Response) {
     try {
-      const { truckId, driverId, type, status, startDate, endDate } = req.query;
-      const userRole = (req as any).user.role;
-      const userId = (req as any).user.id;
+      const {
+        truckId,
+        driverId,
+        type,
+        status,
+        startDate,
+        endDate,
+        page = "1",
+        limit = "10",
+      } = req.query;
+      const truckIdValue = typeof truckId === "string" ? truckId : undefined;
+      const driverIdValue = typeof driverId === "string" ? driverId : undefined;
+      const typeValue = typeof type === "string" ? type : undefined;
+      const statusValue = typeof status === "string" ? status : undefined;
+      const userRole = req.user?.role;
+      const userId = req.user?.id;
+      if (!userRole || !userId) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+      const parsedPage = Math.max(parseInt(page as string, 10) || 1, 1);
+      const parsedLimit = Math.min(
+        Math.max(parseInt(limit as string, 10) || 10, 1),
+        100,
+      );
+      const skip = (parsedPage - 1) * parsedLimit;
 
-      const where: any = {};
+      const where: Prisma.OccurrenceWhereInput = {};
 
       // Motorista só vê suas próprias ocorrências
       if (userRole === "MOTORISTA") {
         where.driverId = userId;
       } else {
-        if (driverId) where.driverId = driverId;
+        if (driverIdValue) where.driverId = driverIdValue;
       }
 
-      if (truckId) where.truckId = truckId;
-      if (type) where.type = type;
-      if (status) where.status = status;
+      if (truckIdValue) where.truckId = truckIdValue;
+      if (typeValue) where.type = typeValue as OccurrenceType;
+      if (statusValue) where.status = statusValue as OccurrenceStatus;
 
       if (startDate || endDate) {
         where.occurredAt = {};
@@ -146,28 +176,39 @@ export const occurrenceController = {
         if (endDate) where.occurredAt.lte = new Date(endDate as string);
       }
 
-      const occurrences = await prisma.occurrence.findMany({
-        where,
-        include: {
-          truck: {
-            select: {
-              id: true,
-              plate: true,
-              model: true,
+      const [total, occurrences] = await Promise.all([
+        prisma.occurrence.count({ where }),
+        prisma.occurrence.findMany({
+          where,
+          include: {
+            truck: {
+              select: {
+                id: true,
+                plate: true,
+                model: true,
+              },
+            },
+            driver: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
             },
           },
-          driver: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-        orderBy: { occurredAt: "desc" },
-      });
+          orderBy: { occurredAt: "desc" },
+          skip,
+          take: parsedLimit,
+        }),
+      ]);
 
-      res.json(occurrences);
+      res.json({
+        data: occurrences,
+        total,
+        page: parsedPage,
+        limit: parsedLimit,
+        totalPages: Math.ceil(total / parsedLimit),
+      });
     } catch (error) {
       res.status(500).json({ error: "Erro ao listar ocorrências" });
     }
@@ -209,7 +250,7 @@ export const occurrenceController = {
       const { id } = req.params;
       const { status, resolutionNotes, actualCost } = req.body;
 
-      const updateData: any = { status };
+      const updateData: Prisma.OccurrenceUpdateInput = { status };
 
       if (resolutionNotes) updateData.resolutionNotes = resolutionNotes;
       if (actualCost) updateData.actualCost = actualCost;
@@ -254,7 +295,10 @@ export const occurrenceController = {
 
       res.json({ message: "Ocorrência atualizada com sucesso", occurrence });
     } catch (error) {
-      console.error("Erro ao atualizar ocorrência:", error);
+      logger.error("Erro ao atualizar ocorrência", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ error: "Erro ao atualizar ocorrência" });
     }
   },
@@ -269,12 +313,15 @@ export const occurrenceController = {
       }
 
       const photoUrls = files.map(
-        (file) => `/uploads/occurrences/${file.filename}`,
+        (file) => buildPrivateFileUrl("occurrences", file.filename),
       );
 
       res.json({ message: "Fotos enviadas com sucesso", photoUrls });
     } catch (error) {
-      console.error("Erro no upload:", error);
+      logger.error("Erro no upload de ocorrência", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ error: "Erro ao fazer upload das fotos" });
     }
   },
@@ -283,9 +330,10 @@ export const occurrenceController = {
   async getStatistics(req: Request, res: Response) {
     try {
       const { truckId, startDate, endDate } = req.query;
+      const truckIdValue = typeof truckId === "string" ? truckId : undefined;
 
-      const where: any = {};
-      if (truckId) where.truckId = truckId;
+      const where: Prisma.OccurrenceWhereInput = {};
+      if (truckIdValue) where.truckId = truckIdValue;
 
       if (startDate || endDate) {
         where.occurredAt = {};
@@ -295,10 +343,13 @@ export const occurrenceController = {
 
       const occurrences = await prisma.occurrence.findMany({ where });
 
+      const byType: Partial<Record<OccurrenceType, number>> = {};
+      const byStatus: Partial<Record<OccurrenceStatus, number>> = {};
+
       const stats = {
         total: occurrences.length,
-        byType: {} as any,
-        byStatus: {} as any,
+        byType,
+        byStatus,
         withFinancialImpact: occurrences.filter((o) => o.hasFinancialImpact)
           .length,
         totalEstimatedCost: occurrences.reduce(
@@ -313,13 +364,16 @@ export const occurrenceController = {
 
       // Agrupar por tipo
       occurrences.forEach((o) => {
-        stats.byType[o.type] = (stats.byType[o.type] || 0) + 1;
-        stats.byStatus[o.status] = (stats.byStatus[o.status] || 0) + 1;
+        byType[o.type] = (byType[o.type] || 0) + 1;
+        byStatus[o.status] = (byStatus[o.status] || 0) + 1;
       });
 
       res.json(stats);
     } catch (error) {
-      console.error("Erro ao calcular estatísticas:", error);
+      logger.error("Erro ao calcular estatísticas de ocorrências", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ error: "Erro ao calcular estatísticas" });
     }
   },

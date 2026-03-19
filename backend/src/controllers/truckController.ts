@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
+import { Prisma, TruckStatus } from "@prisma/client";
 import { prisma } from "../lib/prisma";
+import { logger } from "../lib/logger";
 
 export const truckController = {
   // Criar caminhão
@@ -36,8 +38,13 @@ export const truckController = {
       res
         .status(201)
         .json({ message: "Caminhão cadastrado com sucesso", truck });
-    } catch (error: any) {
-      if (error.code === "P2002") {
+    } catch (error: unknown) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        (error as { code?: string }).code === "P2002"
+      ) {
         return res.status(409).json({ error: "Placa já cadastrada" });
       }
       return res.status(500).json({ error: "Erro ao cadastrar caminhão" });
@@ -48,12 +55,13 @@ export const truckController = {
   async list(req: Request, res: Response) {
     try {
       const { status, active, page, limit } = req.query;
+      const statusValue = typeof status === "string" ? status : undefined;
 
       const take = limit ? Math.min(Number(limit), 200) : undefined;
       const skip = page && take ? (Number(page) - 1) * take : undefined;
 
-      const where: any = {};
-      if (status) where.status = status;
+      const where: Prisma.TruckWhereInput = {};
+      if (statusValue) where.status = statusValue as TruckStatus;
       if (active !== undefined) where.active = active === "true";
 
       const [trucks, total] = await Promise.all([
@@ -151,7 +159,7 @@ export const truckController = {
         notes,
       } = req.body;
 
-      const updateData: any = {};
+      const updateData: Prisma.TruckUpdateInput = {};
       if (plate !== undefined)
         updateData.plate = String(plate).trim().toUpperCase();
       if (model !== undefined) updateData.model = model;
@@ -203,7 +211,7 @@ export const truckController = {
   async selectTruck(req: Request, res: Response) {
     try {
       const { truckId } = req.body;
-      const userId = (req as any).user?.id;
+      const userId = req.user?.id;
 
       if (!userId) {
         return res.status(401).json({ error: "Usuário não autenticado" });
@@ -251,7 +259,10 @@ export const truckController = {
         truck: updatedTruck,
       });
     } catch (error) {
-      console.error(error);
+      logger.error("Erro ao selecionar caminhão", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return res.status(500).json({ error: "Erro ao selecionar caminhão" });
     }
   },
@@ -259,7 +270,7 @@ export const truckController = {
   // Motorista entrega caminhão
   async releaseTruck(req: Request, res: Response) {
     try {
-      const userId = (req as any).user?.id;
+      const userId = req.user?.id;
 
       if (!userId) {
         return res.status(401).json({ error: "Usuário não autenticado" });

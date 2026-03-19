@@ -22,13 +22,15 @@ dirs.forEach(dir => {
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     let folder = 'checklist';
-    
-    if (req.path.includes('occurrence')) {
+
+    const routeContext = `${req.baseUrl || ""}${req.path || ""}`.toLowerCase();
+
+    if (routeContext.includes('/occurrences')) {
       folder = 'occurrences';
-    } else if (req.path.includes('tire')) {
+    } else if (routeContext.includes('/tires')) {
       folder = 'tires';
     }
-    
+
     cb(null, path.join(uploadDir, folder));
   },
   filename: (req, file, cb) => {

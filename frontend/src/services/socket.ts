@@ -1,21 +1,17 @@
 import { io, Socket } from "socket.io-client";
+import { SOCKET_URL } from "@/config/env";
 
 class SocketService {
   private socket: Socket | null = null;
 
   connect(userId: string) {
     if (!this.socket) {
-      this.socket = io("http://localhost:3005", {
+      this.socket = io(SOCKET_URL, {
         transports: ["websocket"],
       });
 
       this.socket.on("connect", () => {
-        console.log("Socket conectado");
         this.socket?.emit("join", userId);
-      });
-
-      this.socket.on("disconnect", () => {
-        console.log("Socket desconectado");
       });
     }
 

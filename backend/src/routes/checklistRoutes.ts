@@ -2,6 +2,12 @@ import { Router } from "express";
 import { checklistController } from "../controllers/checklistController";
 import { authenticate, authorize } from "../middleware/auth";
 import { upload } from "../middleware/upload";
+import { validate } from "../middleware/validate";
+import {
+  checklistIdParamSchema,
+  createChecklistBodySchema,
+  listChecklistsQuerySchema,
+} from "../schemas/checklistSchemas";
 
 const router = Router();
 
@@ -15,8 +21,13 @@ router.post(
   checklistController.uploadPhotos,
 );
 
-router.post("/", authorize("MOTORISTA"), checklistController.create);
-router.get("/", checklistController.list);
-router.get("/:id", checklistController.getById);
+router.post(
+  "/",
+  authorize("MOTORISTA"),
+  validate({ body: createChecklistBodySchema }),
+  checklistController.create,
+);
+router.get("/", validate({ query: listChecklistsQuerySchema }), checklistController.list);
+router.get("/:id", validate({ params: checklistIdParamSchema }), checklistController.getById);
 
 export default router;

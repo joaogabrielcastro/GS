@@ -1,11 +1,25 @@
 import { Request, Response } from "express";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
+import { buildPrivateFileUrl } from "../lib/storage";
+import { logger } from "../lib/logger";
+
+type ChecklistPhotoInput = {
+  category: string;
+  axleNumber?: number | string | null;
+  side?: string | null;
+  photoUrl: string;
+  notes?: string | null;
+};
 
 export const checklistController = {
   // Criar checklist diário
   async create(req: Request, res: Response) {
     try {
-      const driverId = (req as any).user.id;
+      const driverId = req.user?.id;
+      if (!driverId) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
       const {
         truckId,
         cabinPhotoUrl,
@@ -49,13 +63,14 @@ export const checklistController = {
       }
 
       // Parse checklistPhotos if it came as a JSON string
-      let photos: any[] = [];
+      let photos: ChecklistPhotoInput[] = [];
       if (checklistPhotos) {
         try {
-          photos =
-            typeof checklistPhotos === "string"
-              ? JSON.parse(checklistPhotos)
-              : checklistPhotos;
+            photos = (
+              typeof checklistPhotos === "string"
+                ? JSON.parse(checklistPhotos)
+                : checklistPhotos
+            ) as ChecklistPhotoInput[];
         } catch {
           photos = [];
         }
@@ -85,9 +100,9 @@ export const checklistController = {
             photos.length > 0
               ? {
                   createMany: {
-                    data: photos.map((p: any) => ({
+                    data: photos.map((p) => ({
                       category: p.category,
-                      axleNumber: p.axleNumber ? parseInt(p.axleNumber) : null,
+                      axleNumber: p.axleNumber ? parseInt(String(p.axleNumber), 10) : null,
                       side: p.side || null,
                       photoUrl: p.photoUrl,
                       notes: p.notes || null,
@@ -130,7 +145,10 @@ export const checklistController = {
         checklist,
       });
     } catch (error) {
-      console.error("Erro ao criar checklist:", error);
+      logger.error("Erro ao criar checklist", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return res.status(500).json({ error: "Erro ao criar checklist" });
     }
   },
@@ -138,20 +156,38 @@ export const checklistController = {
   // Listar checklists
   async list(req: Request, res: Response) {
     try {
-      const { truckId, driverId, startDate, endDate } = req.query;
-      const userRole = (req as any).user.role;
-      const userId = (req as any).user.id;
+      const {
+        truckId,
+        driverId,
+        startDate,
+        endDate,
+        page = "1",
+        limit = "10",
+      } = req.query;
+      const truckIdValue = typeof truckId === "string" ? truckId : undefined;
+      const driverIdValue = typeof driverId === "string" ? driverId : undefined;
+      const userRole = req.user?.role;
+      const userId = req.user?.id;
+      if (!userRole || !userId) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+      const parsedPage = Math.max(parseInt(page as string, 10) || 1, 1);
+      const parsedLimit = Math.min(
+        Math.max(parseInt(limit as string, 10) || 10, 1),
+        100,
+      );
+      const skip = (parsedPage - 1) * parsedLimit;
 
-      const where: any = {};
+      const where: Prisma.DailyChecklistWhereInput = {};
 
       // Motorista só vê seus próprios checklists
       if (userRole === "MOTORISTA") {
         where.driverId = userId;
       } else {
-        if (driverId) where.driverId = driverId;
+        if (driverIdValue) where.driverId = driverIdValue;
       }
 
-      if (truckId) where.truckId = truckId;
+      if (truckIdValue) where.truckId = truckIdValue;
 
       if (startDate || endDate) {
         where.date = {};
@@ -159,31 +195,42 @@ export const checklistController = {
         if (endDate) where.date.lte = new Date(endDate as string);
       }
 
-      const checklists = await prisma.dailyChecklist.findMany({
-        where,
-        include: {
-          truck: {
-            select: {
-              id: true,
-              plate: true,
-              model: true,
+      const [total, checklists] = await Promise.all([
+        prisma.dailyChecklist.count({ where }),
+        prisma.dailyChecklist.findMany({
+          where,
+          include: {
+            truck: {
+              select: {
+                id: true,
+                plate: true,
+                model: true,
+              },
+            },
+            driver: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            photos: {
+              orderBy: { axleNumber: "asc" },
             },
           },
-          driver: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-          photos: {
-            orderBy: { axleNumber: "asc" },
-          },
-        },
-        orderBy: { date: "desc" },
-      });
+          orderBy: { date: "desc" },
+          skip,
+          take: parsedLimit,
+        }),
+      ]);
 
-      return res.json(checklists);
+      return res.json({
+        data: checklists,
+        total,
+        page: parsedPage,
+        limit: parsedLimit,
+        totalPages: Math.ceil(total / parsedLimit),
+      });
     } catch (error) {
       return res.status(500).json({ error: "Erro ao listar checklists" });
     }
@@ -230,12 +277,18 @@ export const checklistController = {
       const photoUrls: Record<string, string> = {};
 
       for (const file of files) {
-        photoUrls[file.fieldname] = `/uploads/checklist/${file.filename}`;
+        photoUrls[file.fieldname] = buildPrivateFileUrl(
+          "checklist",
+          file.filename,
+        );
       }
 
       return res.json({ message: "Fotos enviadas com sucesso", photoUrls });
     } catch (error) {
-      console.error("Erro no upload:", error);
+      logger.error("Erro no upload de checklist", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return res.status(500).json({ error: "Erro ao fazer upload das fotos" });
     }
   },

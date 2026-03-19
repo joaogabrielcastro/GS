@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
+import { Prisma, TireStatus } from "@prisma/client";
 import { prisma } from "../lib/prisma";
+import { logger } from "../lib/logger";
 
 export const tireController = {
   // Criar pneu
@@ -63,7 +65,10 @@ export const tireController = {
 
       res.status(201).json({ message: "Pneu cadastrado com sucesso", tire });
     } catch (error) {
-      console.error("Erro ao criar pneu:", error);
+      logger.error("Erro ao criar pneu", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ error: "Erro ao cadastrar pneu" });
     }
   },
@@ -72,13 +77,15 @@ export const tireController = {
   async list(req: Request, res: Response) {
     try {
       const { truckId, status, active, page, limit } = req.query;
+      const truckIdValue = typeof truckId === "string" ? truckId : undefined;
+      const statusValue = typeof status === "string" ? status : undefined;
 
       const take = limit ? Math.min(Number(limit), 200) : undefined;
       const skip = page && take ? (Number(page) - 1) * take : undefined;
 
-      const where: any = {};
-      if (truckId) where.truckId = truckId;
-      if (status) where.status = status;
+      const where: Prisma.TireWhereInput = {};
+      if (truckIdValue) where.truckId = truckIdValue;
+      if (statusValue) where.status = statusValue as TireStatus;
       if (active !== undefined) where.active = active === "true";
 
       const [tires, total] = await Promise.all([
@@ -200,7 +207,7 @@ export const tireController = {
 
       // Atualizar status do pneu conforme o evento
       let newStatus = tire.status;
-      let updateData: any = { currentKm: kmAtEvent };
+      const updateData: Prisma.TireUpdateInput = { currentKm: kmAtEvent };
 
       if (eventType === "ESTOURO" || eventType === "SUBSTITUIDO") {
         newStatus = "SUBSTITUIDO";
@@ -218,7 +225,10 @@ export const tireController = {
 
       res.status(201).json({ message: "Evento registrado com sucesso", event });
     } catch (error) {
-      console.error("Erro ao registrar evento:", error);
+      logger.error("Erro ao registrar evento de pneu", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ error: "Erro ao registrar evento" });
     }
   },
@@ -227,9 +237,10 @@ export const tireController = {
   async getStatistics(req: Request, res: Response) {
     try {
       const { truckId } = req.query;
+      const truckIdValue = typeof truckId === "string" ? truckId : undefined;
 
-      const where: any = { active: true };
-      if (truckId) where.truckId = truckId;
+      const where: Prisma.TireWhereInput = { active: true };
+      if (truckIdValue) where.truckId = truckIdValue;
 
       const tires = await prisma.tire.findMany({
         where,
@@ -257,7 +268,7 @@ export const tireController = {
       const eventsByType = await prisma.tireEvent.groupBy({
         by: ["eventType"],
         _count: true,
-        where: truckId ? { tire: { truckId: truckId as string } } : {},
+        where: truckIdValue ? { tire: { truckId: truckIdValue } } : {},
       });
 
       res.json({
@@ -272,7 +283,10 @@ export const tireController = {
             : 0,
       });
     } catch (error) {
-      console.error("Erro ao calcular estatísticas:", error);
+      logger.error("Erro ao calcular estatísticas de pneus", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ error: "Erro ao calcular estatísticas" });
     }
   },
@@ -354,7 +368,10 @@ export const tireController = {
 
       res.json({ alerts, count: alerts.length });
     } catch (error) {
-      console.error("Erro ao buscar alertas:", error);
+      logger.error("Erro ao buscar alertas de pneus", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ error: "Erro ao buscar alertas" });
     }
   },

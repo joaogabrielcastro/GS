@@ -273,7 +273,6 @@ export interface User {
 
 export interface AuthResponse {
   token: string;
-  refreshToken: string;
   user: User;
 }
 
@@ -356,11 +355,18 @@ export interface DailyChecklist {
   truckId: string;
   driverId: string;
   date: string;
+  odometer?: number;
   overallCondition?: string;
+  tiresCondition?: string;
+  cabinCondition?: string;
+  canvasCondition?: string;
   notes?: string;
   location?: string;
   latitude?: number;
   longitude?: number;
+  cabinPhotoUrl?: string;
+  tiresPhotoUrl?: string;
+  canvasPhotoUrl?: string;
   truck?: Truck;
   driver?: User;
   createdAt: string;
@@ -453,4 +459,19 @@ export interface Notification {
   read: boolean;
   readAt?: string;
   createdAt: string;
+}
+
+export interface AdminNotification {
+  userNotificationId: string;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface TireStatistics {
+  totalTires: number;
+  totalCost: number;
+  averageLifeKm: number;
+  totalEvents: number;
 }

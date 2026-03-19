@@ -11,7 +11,7 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["logo.png"],
       devOptions: {
-        enabled: true,
+        enabled: false,
       },
       manifest: {
         name: "GS Transportes - Gestão",
@@ -47,11 +47,11 @@ export default defineConfig({
     port: 5175,
     proxy: {
       "/api": {
-        target: "http://localhost:3005",
+        target: "http://localhost:3000",
         changeOrigin: true,
       },
       "/uploads": {
-        target: "http://localhost:3005",
+        target: "http://localhost:3000",
         changeOrigin: true,
       },
     },

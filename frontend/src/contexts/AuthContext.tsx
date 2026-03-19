@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, AuthResponse } from "@/types";
-import api from "@/services/api";
+import api, { getApiErrorMessage } from "@/services/api";
 import socketService from "@/services/socket";
 import toast from "react-hot-toast";
 
@@ -10,7 +10,7 @@ interface AuthContextData {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
 }
 
@@ -60,10 +60,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         password,
       });
 
-      const { token, refreshToken, user } = response.data;
+      const { token, user } = response.data;
 
       localStorage.setItem("token", token);
-      localStorage.setItem("refreshToken", refreshToken);
       localStorage.setItem("user", JSON.stringify(user));
 
       setToken(token);
@@ -84,35 +83,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       } else {
         navigate("/");
       }
-    } catch (error: any) {
-      const message = error.response?.data?.error || "Erro ao fazer login";
+    } catch (error) {
+      const message = getApiErrorMessage(error, "Erro ao fazer login");
       toast.error(message);
       throw error;
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("user");
+  const logout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch {
+      // Mesmo com falha no backend, limpamos sessão local.
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
 
-    setToken(null);
-    setUser(null);
+      setToken(null);
+      setUser(null);
 
-    // Desconectar do Socket.IO
-    socketService.disconnect();
+      // Desconectar do Socket.IO
+      socketService.disconnect();
 
-    toast.success("Logout realizado com sucesso");
-    navigate("/login");
+      toast.success("Logout realizado com sucesso");
+      navigate("/login");
+    }
   };
 
   const register = async (data: RegisterData) => {
     try {
       await api.post("/auth/register", data);
       toast.success("Usuário cadastrado com sucesso! Faça login.");
-    } catch (error: any) {
-      const message =
-        error.response?.data?.error || "Erro ao cadastrar usuário";
+    } catch (error) {
+      const message = getApiErrorMessage(error, "Erro ao cadastrar usuário");
       toast.error(message);
       throw error;
     }

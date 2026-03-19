@@ -60,8 +60,6 @@ const RoleBasedRedirect: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  console.log("User role:", user.role); // Debug
-
   switch (user.role) {
     case "MOTORISTA":
       return <Navigate to="/motorista" replace />;
