@@ -1,6 +1,12 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
-import { getTirePositionLabel, TIRE_STATUS_LABELS, type TireStatus } from "@/types";
+import {
+  getTirePositionLabel,
+  TIRE_STATUS_LABELS,
+  VEHICLE_AXLES,
+  type TireStatus,
+  type VehicleType,
+} from "@/types";
 import type { Tire, Truck } from "@/types";
 
 interface TireModalProps {
@@ -38,6 +44,34 @@ const TireModal: React.FC<TireModalProps> = ({
   onSubmitCreate,
   onRegisterEvent,
 }) => {
+  const [selectedPosition, setSelectedPosition] = useState("");
+  const [positionError, setPositionError] = useState("");
+
+  const selectedTruck = useMemo(
+    () => allTrucks.find((truck) => truck.id === tireFormTruckId),
+    [allTrucks, tireFormTruckId],
+  );
+
+  const axleMap = useMemo(() => {
+    if (!selectedTruck?.vehicleType) return [];
+    return VEHICLE_AXLES[selectedTruck.vehicleType as VehicleType] ?? [];
+  }, [selectedTruck]);
+
+  const occupiedPositions = useMemo(
+    () =>
+      new Set(
+        (selectedTruck?.tires ?? [])
+          .filter((tire) => tire.active !== false)
+          .map((tire) => tire.position),
+      ),
+    [selectedTruck],
+  );
+
+  useEffect(() => {
+    setSelectedPosition("");
+    setPositionError("");
+  }, [tireFormTruckId, isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -56,6 +90,10 @@ const TireModal: React.FC<TireModalProps> = ({
           <form
             onSubmit={async (e) => {
               e.preventDefault();
+              if (!selectedPosition) {
+                setPositionError("Selecione uma posição no mapa de eixos.");
+                return;
+              }
               const form = e.target as HTMLFormElement;
               const formData = new FormData(form);
               await onSubmitCreate(Object.fromEntries(formData.entries()));
@@ -80,16 +118,116 @@ const TireModal: React.FC<TireModalProps> = ({
                 </select>
               </div>
               {tireFormTruckId && (
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Posição *</label>
-                  <select name="position" required className="w-full p-2 border rounded mt-1">
-                    <option value="">Selecione a posição</option>
-                    {tireFormPositions.map((pos) => (
-                      <option key={pos} value={pos}>
-                        {getTirePositionLabel(pos)} ({pos})
-                      </option>
-                    ))}
-                  </select>
+                <div className="border rounded-lg p-3 bg-gray-50">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-gray-700">Posição *</label>
+                    {selectedPosition && (
+                      <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-1 rounded-full">
+                        {getTirePositionLabel(selectedPosition)} ({selectedPosition})
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    {axleMap.map((axle) => {
+                      const n = axle.axleNumber;
+                      const leftPositions =
+                        axle.tiresPerSide === "double"
+                          ? [`E${n}EE`, `E${n}EI`]
+                          : [`E${n}E`];
+                      const rightPositions =
+                        axle.tiresPerSide === "double"
+                          ? [`E${n}DE`, `E${n}DI`]
+                          : [`E${n}D`];
+
+                      const renderPosButton = (position: string) => {
+                        const isOccupied = occupiedPositions.has(position);
+                        const isSelected = selectedPosition === position;
+
+                        return (
+                          <button
+                            key={position}
+                            type="button"
+                            disabled={isOccupied}
+                            onClick={() => {
+                              setSelectedPosition(position);
+                              setPositionError("");
+                            }}
+                            className={`text-xs px-2 py-1 rounded border transition ${
+                              isOccupied
+                                ? "bg-gray-200 text-gray-400 border-gray-200 cursor-not-allowed"
+                                : isSelected
+                                  ? "bg-blue-600 text-white border-blue-600"
+                                  : "bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:text-blue-700"
+                            }`}
+                            title={
+                              isOccupied
+                                ? `${getTirePositionLabel(position)} já ocupada`
+                                : getTirePositionLabel(position)
+                            }
+                          >
+                            {position}
+                          </button>
+                        );
+                      };
+
+                      return (
+                        <div key={n} className="bg-white border rounded-md p-2">
+                          <p className="text-xs font-semibold text-gray-600 mb-2">
+                            {axle.label}
+                          </p>
+                          <div className="grid grid-cols-2 gap-2 items-center">
+                            <div className="flex gap-1 flex-wrap justify-start">
+                              {leftPositions.map(renderPosButton)}
+                            </div>
+                            <div className="flex gap-1 flex-wrap justify-end">
+                              {rightPositions.map(renderPosButton)}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {tireFormPositions.some((pos) => pos.startsWith("ESTEPE")) && (
+                      <div className="bg-white border rounded-md p-2">
+                        <p className="text-xs font-semibold text-gray-600 mb-2">Estepes</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {tireFormPositions
+                            .filter((pos) => pos.startsWith("ESTEPE"))
+                            .map((position) => {
+                              const isOccupied = occupiedPositions.has(position);
+                              const isSelected = selectedPosition === position;
+                              return (
+                                <button
+                                  key={position}
+                                  type="button"
+                                  disabled={isOccupied}
+                                  onClick={() => {
+                                    setSelectedPosition(position);
+                                    setPositionError("");
+                                  }}
+                                  className={`text-xs px-2 py-1 rounded border transition ${
+                                    isOccupied
+                                      ? "bg-gray-200 text-gray-400 border-gray-200 cursor-not-allowed"
+                                      : isSelected
+                                        ? "bg-blue-600 text-white border-blue-600"
+                                        : "bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:text-blue-700"
+                                  }`}
+                                >
+                                  {position}
+                                </button>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {positionError && (
+                    <p className="text-xs text-red-600 mt-2">{positionError}</p>
+                  )}
+
+                  <input type="hidden" name="position" value={selectedPosition} />
                 </div>
               )}
               <div>
