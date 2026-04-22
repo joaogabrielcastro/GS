@@ -6,76 +6,7 @@ import { dashboardService } from "@/services/dashboardService";
 import { VEHICLE_TYPE_LABELS, VEHICLE_AXLES } from "@/types";
 import toast from "react-hot-toast";
 import { ArrowLeft, Camera, CheckCircle, AlertTriangle } from "lucide-react";
-
-// ─── SVG Axle Diagram ──────────────────────────────────────────────────────────
-const AxleDiagram = ({ config, leftDone, rightDone }: any) => {
-  const isDbl = config.tiresPerSide === "double";
-  const W = isDbl ? 160 : 110;
-  const tireW = isDbl ? 14 : 16;
-  const gap = isDbl ? 4 : 0;
-  const rightX = isDbl ? W - tireW * 2 - gap : W - tireW;
-  const axleX1 = isDbl ? tireW * 2 + gap : tireW;
-  const axleX2 = isDbl ? W - tireW * 2 - gap : W - tireW;
-  const lc = leftDone ? "#22c55e" : "#94a3b8";
-  const rc = rightDone ? "#22c55e" : "#94a3b8";
-
-  return (
-    <svg
-      viewBox={`0 0 ${W} 46`}
-      className="w-full max-w-xs mx-auto"
-      style={{ height: 46 }}
-    >
-      <rect
-        x={axleX1}
-        y={18}
-        width={axleX2 - axleX1}
-        height={6}
-        fill="#cbd5e1"
-        rx={3}
-      />
-      <rect x={0} y={8} width={tireW} height={26} fill={lc} rx={3} />
-      {isDbl && (
-        <rect
-          x={tireW + gap}
-          y={8}
-          width={tireW}
-          height={26}
-          fill={lc}
-          rx={3}
-        />
-      )}
-      <rect x={rightX} y={8} width={tireW} height={26} fill={rc} rx={3} />
-      {isDbl && (
-        <rect
-          x={rightX + tireW + gap}
-          y={8}
-          width={tireW}
-          height={26}
-          fill={rc}
-          rx={3}
-        />
-      )}
-      <text
-        x={isDbl ? tireW + 2 : tireW / 2}
-        y={44}
-        textAnchor="middle"
-        fontSize="8"
-        fill="#64748b"
-      >
-        ESQ
-      </text>
-      <text
-        x={isDbl ? rightX + tireW + 2 : rightX + tireW / 2}
-        y={44}
-        textAnchor="middle"
-        fontSize="8"
-        fill="#64748b"
-      >
-        DIR
-      </text>
-    </svg>
-  );
-};
+import { ChecklistAxleDiagram } from "@/components/common/TruckAxleDiagram";
 
 // ─── Photo button with camera capture ─────────────────────────────────────────
 const PhotoButton = ({ label, fieldName, preview, onChange }: any) => (
@@ -157,10 +88,9 @@ const ChecklistPage: React.FC = () => {
     ? (VEHICLE_AXLES[truck.vehicleType as keyof typeof VEHICLE_AXLES] ?? [])
     : [];
 
-  // Group axles by section
-  const axleSections = axles.reduce<{ section: string; axles: any[] }[]>(
-    (acc, axle: any) => {
-      const sname = (axle as any).section || "Veículo";
+  const axleSections = axles.reduce<{ section: string; axles: typeof axles }[]>(
+    (acc, axle) => {
+      const sname = axle.section || "Veículo";
       const found = acc.find((s) => s.section === sname);
       if (found) found.axles.push(axle);
       else acc.push({ section: sname, axles: [axle] });
@@ -447,7 +377,7 @@ const ChecklistPage: React.FC = () => {
                           )}
                         </div>
                         <div className="mb-4 px-2">
-                          <AxleDiagram
+                          <ChecklistAxleDiagram
                             config={axle}
                             leftDone={ld}
                             rightDone={rd}
