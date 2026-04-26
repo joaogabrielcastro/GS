@@ -23,14 +23,37 @@ import type { AdminNotification, User } from "@/types";
 
 const getImageUrl = (path: string | null | undefined): string => {
   if (!path) return "";
-  if (path.startsWith("http")) return path;
-  if (path.startsWith("/uploads/checklist/")) {
-    return `${ASSETS_BASE_URL}${path.replace("/uploads/checklist/", "/api/files/checklist/")}`;
+  const normalized = path.replace(/\\/g, "/").trim();
+
+  if (normalized.startsWith("http")) return normalized;
+
+  const withLeadingSlash = normalized.startsWith("/")
+    ? normalized
+    : `/${normalized}`;
+
+  if (withLeadingSlash.startsWith("/uploads/checklist/")) {
+    return `${ASSETS_BASE_URL}${withLeadingSlash.replace("/uploads/checklist/", "/api/files/checklist/")}`;
   }
-  if (path.startsWith("/uploads/occurrences/")) {
-    return `${ASSETS_BASE_URL}${path.replace("/uploads/occurrences/", "/api/files/occurrences/")}`;
+  if (withLeadingSlash.startsWith("/uploads/occurrences/")) {
+    return `${ASSETS_BASE_URL}${withLeadingSlash.replace("/uploads/occurrences/", "/api/files/occurrences/")}`;
   }
-  return `${ASSETS_BASE_URL}${path}`;
+  if (withLeadingSlash.startsWith("/api/files/")) {
+    return `${ASSETS_BASE_URL}${withLeadingSlash}`;
+  }
+
+  // Compatibilidade com valores legados salvos como "checklist/<arquivo>" ou só "<arquivo>"
+  if (withLeadingSlash.startsWith("/checklist/")) {
+    return `${ASSETS_BASE_URL}${withLeadingSlash.replace("/checklist/", "/api/files/checklist/")}`;
+  }
+  if (withLeadingSlash.startsWith("/occurrences/")) {
+    return `${ASSETS_BASE_URL}${withLeadingSlash.replace("/occurrences/", "/api/files/occurrences/")}`;
+  }
+
+  if (!withLeadingSlash.includes("/")) {
+    return `${ASSETS_BASE_URL}/api/files/checklist/${withLeadingSlash.replace(/^\//, "")}`;
+  }
+
+  return `${ASSETS_BASE_URL}${withLeadingSlash}`;
 };
 
 const AdminDashboardContainer: React.FC = () => {

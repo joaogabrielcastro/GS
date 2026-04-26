@@ -19,7 +19,7 @@ const AdminTabs: React.FC<AdminTabsProps> = ({ activeTab, onChange }) => {
   return (
     <div className="bg-white border-b mb-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <nav className="flex space-x-8 overflow-x-auto">
+        <nav className="flex space-x-3 sm:space-x-8 overflow-x-auto pb-1">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -35,6 +35,9 @@ const AdminTabs: React.FC<AdminTabsProps> = ({ activeTab, onChange }) => {
             </button>
           ))}
         </nav>
+        <p className="text-xs text-gray-500 mt-2 sm:hidden">
+          Deslize as abas para o lado para acessar todas as opções.
+        </p>
       </div>
     </div>
   );

@@ -39,14 +39,14 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-fade-in relative">
+      <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-fade-in relative">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 font-bold text-xl"
         >
           &times;
         </button>
-        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+        <h2 className="text-xl sm:text-2xl font-bold mb-6 flex items-center gap-2 pr-8">
           <FileText className="w-6 h-6 text-blue-600" />
           Detalhes do Checklist
         </h2>
@@ -55,23 +55,23 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
           <div className="bg-gray-50 p-4 rounded-lg">
             <h3 className="font-semibold text-gray-900 mb-3">Informações do Veículo</h3>
             <div className="space-y-2 text-sm">
-              <p className="flex justify-between">
+              <p className="flex justify-between gap-3">
                 <span className="text-gray-500">Placa:</span>
-                <span className="font-medium">{checklist.truck?.plate}</span>
+                <span className="font-medium text-right">{checklist.truck?.plate}</span>
               </p>
-              <p className="flex justify-between">
+              <p className="flex justify-between gap-3">
                 <span className="text-gray-500">Hodômetro:</span>
-                <span className="font-medium">
+                <span className="font-medium text-right">
                   {checklist.odometer?.toLocaleString()} km
                 </span>
               </p>
-              <p className="flex justify-between">
+              <p className="flex justify-between gap-3">
                 <span className="text-gray-500">Motorista:</span>
-                <span className="font-medium">{checklist.driver?.name}</span>
+                <span className="font-medium text-right">{checklist.driver?.name}</span>
               </p>
-              <p className="flex justify-between">
+              <p className="flex justify-between gap-3">
                 <span className="text-gray-500">Data:</span>
-                <span className="font-medium">
+                <span className="font-medium text-right">
                   {new Date(checklist.createdAt).toLocaleString()}
                 </span>
               </p>
@@ -81,27 +81,27 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
           <div className="bg-blue-50 p-4 rounded-lg">
             <h3 className="font-semibold text-blue-900 mb-3">Condições Gerais</h3>
             <div className="space-y-2 text-sm">
-              <p className="flex justify-between">
+              <p className="flex justify-between gap-3">
                 <span className="text-blue-700">Estado Pneus:</span>
-                <span className="font-medium text-blue-900">
+                <span className="font-medium text-blue-900 text-right">
                   {checklist.tiresCondition || "Não informado"}
                 </span>
               </p>
-              <p className="flex justify-between">
+              <p className="flex justify-between gap-3">
                 <span className="text-blue-700">Estado Cabine:</span>
-                <span className="font-medium text-blue-900">
+                <span className="font-medium text-blue-900 text-right">
                   {checklist.cabinCondition || "Não informado"}
                 </span>
               </p>
-              <p className="flex justify-between">
+              <p className="flex justify-between gap-3">
                 <span className="text-blue-700">Estado Lona:</span>
-                <span className="font-medium text-blue-900">
+                <span className="font-medium text-blue-900 text-right">
                   {checklist.canvasCondition || "Não informado"}
                 </span>
               </p>
-              <p className="flex justify-between">
+              <p className="flex justify-between gap-3">
                 <span className="text-blue-700">Geral:</span>
-                <span className="font-medium text-blue-900">
+                <span className="font-medium text-blue-900 text-right">
                   {checklist.overallCondition || "Não informado"}
                 </span>
               </p>
@@ -120,7 +120,7 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
             {checklist.tiresPhotoUrl && (
               <div className="border rounded-lg p-2">
                 <p className="text-center font-semibold mb-2 text-sm text-gray-600">Pneus</p>
@@ -165,7 +165,7 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
           {checklist.photos && checklist.photos.length > 0 && (
             <div className="mt-4">
               <h4 className="font-semibold text-sm text-gray-700 mb-3">Fotos por Eixo</h4>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {checklist.photos.map((photo: ChecklistPhoto) => (
                   <div key={photo.id} className="border rounded-lg p-2">
                     <p className="text-center font-semibold mb-1 text-xs text-gray-600">
