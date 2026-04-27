@@ -97,6 +97,24 @@ cd frontend && npm run dev
 - Backend: http://localhost:3000
 - Prisma Studio: `npx prisma studio`
 
+## ☁️ Deploy em Produção (Uploads)
+
+Para não perder imagens a cada deploy, **não use** upload em disco efêmero do container.
+
+1. Crie um **volume persistente** na plataforma (Coolify/Render/Railway/VPS).
+2. Monte o volume no serviço backend (exemplo de mount path: `/data/transportadora/uploads`).
+3. Configure a variável de ambiente:
+
+```bash
+UPLOAD_PATH=/data/transportadora/uploads
+```
+
+4. Faça deploy.
+5. Valide:
+   - envie uma foto no checklist;
+   - confirme leitura no admin;
+   - faça novo deploy e confirme que a mesma foto continua disponível.
+
 ## 📊 Modelo de Dados
 
 ### Principais Entidades

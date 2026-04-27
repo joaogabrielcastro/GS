@@ -31,6 +31,15 @@ import { successResponseWrapper } from "./middleware/successResponse";
 dotenv.config();
 
 const app = express();
+const uploadPath = process.env.UPLOAD_PATH || "./uploads";
+
+if (process.env.NODE_ENV === "production" && uploadPath.startsWith("./")) {
+  logger.warn("UPLOAD_PATH parece não persistente em produção", {
+    uploadPath,
+    recommendation:
+      "Use um volume persistente e configure UPLOAD_PATH para um caminho absoluto, ex: /data/transportadora/uploads",
+  });
+}
 
 // Confiar em 1 nível de proxy (Railway, Heroku, etc.)
 // Usar o número 1 em vez de `true` para evitar bypass de rate-limit.
