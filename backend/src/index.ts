@@ -24,6 +24,7 @@ import { requestLogger } from "./middleware/requestLogger";
 import { logger } from "./lib/logger";
 import { errorResponseNormalizer } from "./middleware/errorResponse";
 import { startRefreshTokenCleanupJob } from "./jobs/refreshTokenCleanup";
+import { startUploadCleanupJob } from "./jobs/uploadCleanup";
 import { successResponseWrapper } from "./middleware/successResponse";
 
 // Carregar variáveis de ambiente
@@ -166,6 +167,7 @@ httpServer.listen(PORT, () => {
     env: process.env.NODE_ENV || "development",
   });
   startRefreshTokenCleanupJob();
+  startUploadCleanupJob();
 });
 
 // Tratamento de erros não capturados
