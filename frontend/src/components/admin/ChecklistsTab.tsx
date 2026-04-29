@@ -41,6 +41,9 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
                   Caminhão
                 </th>
                 <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Carretas
+                </th>
+                <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Motorista
                 </th>
                 <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -63,6 +66,11 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
                   <td className="px-4 sm:px-6 py-4 text-sm font-medium text-gray-900">
                     {check.truck?.plate}
                   </td>
+                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-600">
+                    {check.truck?.trailerPlates && check.truck.trailerPlates.length > 0
+                      ? check.truck.trailerPlates.join(", ")
+                      : "—"}
+                  </td>
                   <td className="px-4 sm:px-6 py-4 text-sm text-gray-600">{check.driver?.name}</td>
                   <td className="px-4 sm:px-6 py-4 text-sm text-gray-600">
                     {check.odometer?.toLocaleString()} km
@@ -79,7 +87,7 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
               ))}
               {checklists.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                     Nenhum checklist encontrado.
                   </td>
                 </tr>
