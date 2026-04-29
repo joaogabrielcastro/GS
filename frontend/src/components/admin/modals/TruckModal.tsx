@@ -32,19 +32,44 @@ const TruckModal: React.FC<TruckModalProps> = ({
         >
           <input type="hidden" name="id" value={editingTruck?.id || ""} />
           <div className="space-y-4">
-            <input
-              name="plate"
-              placeholder="Placa do cavalo"
-              defaultValue={editingTruck?.plate}
-              className="w-full p-2 border rounded"
-              required
-            />
-            <textarea
-              name="trailerPlates"
-              placeholder="Placas das carretas (separadas por vírgula ou quebra de linha)"
-              defaultValue={editingTruck?.trailerPlates?.join(", ")}
-              className="w-full p-2 border rounded min-h-20"
-            />
+            <div className="rounded-lg border border-blue-100 bg-blue-50/40 p-3">
+              <h3 className="text-sm font-semibold text-blue-900 mb-2">
+                Composição (Cavalo + Carretas)
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Placa do caminhão (cavalo)
+                  </label>
+                  <input
+                    name="plate"
+                    placeholder="Ex.: ABC1D23"
+                    defaultValue={editingTruck?.plate}
+                    className="w-full p-2 border rounded"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Placas das carretas
+                  </label>
+                  <textarea
+                    name="trailerPlates"
+                    placeholder="Uma por linha ou separadas por vírgula"
+                    defaultValue={editingTruck?.trailerPlates?.join(", ")}
+                    className="w-full p-2 border rounded min-h-20"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Exemplo: XYZ9A88, QWE1B22
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border p-3">
+              <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                Dados do Veículo
+              </h3>
             <div className="grid grid-cols-2 gap-4">
               <input
                 name="brand"
@@ -105,6 +130,7 @@ const TruckModal: React.FC<TruckModalProps> = ({
               <option value="PARADO">Parado</option>
               <option value="INATIVO">Inativo</option>
             </select>
+            </div>
           </div>
           <div className="mt-6 flex justify-end gap-2">
             <button

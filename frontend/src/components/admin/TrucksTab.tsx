@@ -11,6 +11,7 @@ interface TrucksTabProps {
   onPageChange: (page: number) => void;
   onNewTruck: () => void;
   onEditTruck: (truck: Truck) => void;
+  onDeleteTruck: (truck: Truck) => void;
 }
 
 const TrucksTab: React.FC<TrucksTabProps> = ({
@@ -21,6 +22,7 @@ const TrucksTab: React.FC<TrucksTabProps> = ({
   onPageChange,
   onNewTruck,
   onEditTruck,
+  onDeleteTruck,
 }) => {
   return (
     <div className="animate-fade-in">
@@ -95,12 +97,20 @@ const TrucksTab: React.FC<TrucksTabProps> = ({
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">{truck.totalKm.toLocaleString()} km</td>
                   <td className="px-6 py-4 text-sm">
-                    <button
-                      onClick={() => onEditTruck(truck)}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      Editar
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => onEditTruck(truck)}
+                        className="text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => onDeleteTruck(truck)}
+                        className="text-red-600 hover:text-red-800 font-medium"
+                      >
+                        Excluir
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

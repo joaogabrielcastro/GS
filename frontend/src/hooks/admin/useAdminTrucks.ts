@@ -31,6 +31,12 @@ export function useAdminTrucks(active: boolean) {
     await load();
   };
 
+  const deleteTruck = async (id: string) => {
+    await truckService.delete(id);
+    toast.success("Caminhão desativado!");
+    await load();
+  };
+
   useEffect(() => {
     if (!active) return;
     load().catch(() => toast.error("Erro ao carregar caminhões"));
@@ -48,6 +54,7 @@ export function useAdminTrucks(active: boolean) {
     editingTruck,
     setEditingTruck,
     saveTruck,
+    deleteTruck,
     reload: load,
   };
 }

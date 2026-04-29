@@ -7,6 +7,8 @@ import {
   listUsersQuerySchema,
   loginBodySchema,
   registerBodySchema,
+  updateUserBodySchema,
+  userIdParamSchema,
   updateProfileBodySchema,
 } from "../schemas/authSchemas";
 
@@ -40,6 +42,20 @@ router.post(
   validate({ body: createUserBodySchema }),
   (req, res, next) => authorize("ADMINISTRADOR")(req, res, next),
   authController.createUser,
+);
+router.put(
+  "/users/:id",
+  authenticate,
+  validate({ params: userIdParamSchema, body: updateUserBodySchema }),
+  (req, res, next) => authorize("ADMINISTRADOR")(req, res, next),
+  authController.updateUser,
+);
+router.delete(
+  "/users/:id",
+  authenticate,
+  validate({ params: userIdParamSchema }),
+  (req, res, next) => authorize("ADMINISTRADOR")(req, res, next),
+  authController.deleteUser,
 );
 
 export default router;

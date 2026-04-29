@@ -135,6 +135,25 @@ export const authService = {
     const response = await api.post("/auth/users", data);
     return response.data;
   },
+  updateUser: async (
+    id: string,
+    data: Partial<{
+      email: string;
+      password: string;
+      name: string;
+      cpf: string;
+      phone: string;
+      role: "MOTORISTA" | "ADMINISTRADOR" | "FINANCEIRO";
+      active: boolean;
+    }>,
+  ) => {
+    const response = await api.put(`/auth/users/${id}`, data);
+    return response.data;
+  },
+  deleteUser: async (id: string) => {
+    const response = await api.delete(`/auth/users/${id}`);
+    return response.data;
+  },
 };
 
 export interface PaginatedResponse<T> {
@@ -164,6 +183,10 @@ export const truckService = {
   },
   update: async (id: string, data: Record<string, unknown>) => {
     const response = await api.put(`/trucks/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/trucks/${id}`);
     return response.data;
   },
   getAvailable: async () => {

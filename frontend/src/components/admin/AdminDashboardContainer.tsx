@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ASSETS_BASE_URL } from "@/config/env";
 import { dashboardService, AdminStats } from "@/services/dashboardService";
-import { authService, notificationService } from "@/services/api";
+import { authService, getApiErrorMessage, notificationService } from "@/services/api";
 import OccurrencesTab from "@/components/admin/OccurrencesTab";
 import ChecklistsTab from "@/components/admin/ChecklistsTab";
 import TrucksTab from "@/components/admin/TrucksTab";
@@ -67,6 +67,7 @@ const AdminDashboardContainer: React.FC = () => {
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isDriverModalOpen, setIsDriverModalOpen] = useState(false);
+  const [editingDriver, setEditingDriver] = useState<User | null>(null);
 
   const occurrences = useAdminOccurrences(activeTab === "ocorrencias");
   const checklists = useAdminChecklists(activeTab === "checklists");
@@ -117,22 +118,63 @@ const AdminDashboardContainer: React.FC = () => {
       const form = e.target as HTMLFormElement;
       const formData = new FormData(form);
       const data = Object.fromEntries(formData.entries());
-      const payload = {
-        email: String(data.email || ""),
-        password: String(data.password || ""),
-        name: String(data.name || ""),
-        cpf: data.cpf ? String(data.cpf) : undefined,
-        phone: data.phone ? String(data.phone) : undefined,
-        role: "MOTORISTA" as const,
-      };
+      const rawPassword = String(data.password || "").trim();
 
-      await authService.createUser(payload);
-      toast.success("Motorista cadastrado!");
+      if (!editingDriver && rawPassword.length < 8) {
+        toast.error("A senha provisória deve ter no mínimo 8 caracteres.");
+        return;
+      }
+      if (editingDriver && rawPassword.length > 0 && rawPassword.length < 8) {
+        toast.error("A nova senha deve ter no mínimo 8 caracteres.");
+        return;
+      }
+
+      if (editingDriver) {
+        await authService.updateUser(editingDriver.id, {
+          email: String(data.email || ""),
+          name: String(data.name || ""),
+          cpf: data.cpf ? String(data.cpf) : undefined,
+          phone: data.phone ? String(data.phone) : undefined,
+          role: "MOTORISTA",
+          ...(rawPassword ? { password: rawPassword } : {}),
+        });
+        toast.success("Motorista atualizado!");
+      } else {
+        await authService.createUser({
+          email: String(data.email || ""),
+          password: rawPassword,
+          name: String(data.name || ""),
+          cpf: data.cpf ? String(data.cpf) : undefined,
+          phone: data.phone ? String(data.phone) : undefined,
+          role: "MOTORISTA",
+        });
+        toast.success("Motorista cadastrado!");
+      }
       setIsDriverModalOpen(false);
+      setEditingDriver(null);
       const updated = await authService.listUsers("MOTORISTA");
       setDrivers(updated);
-    } catch {
-      toast.error("Erro ao cadastrar motorista");
+    } catch (error) {
+      toast.error(
+        getApiErrorMessage(
+          error,
+          "Erro ao cadastrar motorista. Verifique os campos obrigatórios.",
+        ),
+      );
+    }
+  };
+
+  const handleDeleteDriver = async (driver: User) => {
+    const confirmed = window.confirm(`Deseja desativar o motorista ${driver.name}?`);
+    if (!confirmed) return;
+
+    try {
+      await authService.deleteUser(driver.id);
+      toast.success("Motorista desativado!");
+      const updated = await authService.listUsers("MOTORISTA");
+      setDrivers(updated);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao desativar motorista"));
     }
   };
 
@@ -273,6 +315,13 @@ const AdminDashboardContainer: React.FC = () => {
                   trucks.setEditingTruck(truck);
                   trucks.setIsModalOpen(true);
                 }}
+                onDeleteTruck={(truck) => {
+                  const confirmed = window.confirm(`Deseja desativar o caminhão ${truck.plate}?`);
+                  if (!confirmed) return;
+                  void trucks.deleteTruck(truck.id).catch((error) => {
+                    toast.error(getApiErrorMessage(error, "Erro ao desativar caminhão"));
+                  });
+                }}
               />
             )}
 
@@ -281,7 +330,10 @@ const AdminDashboardContainer: React.FC = () => {
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold text-gray-800">Equipe de Motoristas</h2>
                   <button
-                    onClick={() => setIsDriverModalOpen(true)}
+                    onClick={() => {
+                      setEditingDriver(null);
+                      setIsDriverModalOpen(true);
+                    }}
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors"
                   >
                     <Plus className="w-5 h-5" /> Novo Motorista
@@ -297,6 +349,7 @@ const AdminDashboardContainer: React.FC = () => {
                         <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Telefone</th>
                         <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                         <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cadastro</th>
+                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -327,11 +380,30 @@ const AdminDashboardContainer: React.FC = () => {
                           <td className="px-6 py-4 text-sm text-gray-500">
                             {new Date(driver.createdAt).toLocaleDateString()}
                           </td>
+                          <td className="px-6 py-4 text-sm">
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => {
+                                  setEditingDriver(driver);
+                                  setIsDriverModalOpen(true);
+                                }}
+                                className="text-blue-600 hover:text-blue-800 font-medium"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => void handleDeleteDriver(driver)}
+                                className="text-red-600 hover:text-red-800 font-medium"
+                              >
+                                Excluir
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                       {drivers.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                          <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                             Nenhum motorista encontrado.
                           </td>
                         </tr>
@@ -405,19 +477,58 @@ const AdminDashboardContainer: React.FC = () => {
       {isDriverModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md animate-fade-in">
-            <h2 className="text-xl font-bold mb-4">Novo Motorista</h2>
+            <h2 className="text-xl font-bold mb-4">
+              {editingDriver ? "Editar Motorista" : "Novo Motorista"}
+            </h2>
             <form onSubmit={handleSaveDriver}>
               <div className="space-y-4">
-                <input name="name" placeholder="Nome Completo" className="w-full p-2 border rounded" required />
-                <input name="email" type="email" placeholder="Email" className="w-full p-2 border rounded" required />
-                <input name="password" type="password" placeholder="Senha Provisória" className="w-full p-2 border rounded" required />
-                <input name="cpf" placeholder="CPF" className="w-full p-2 border rounded" />
-                <input name="phone" placeholder="Telefone" className="w-full p-2 border rounded" />
+                <input
+                  name="name"
+                  placeholder="Nome Completo"
+                  defaultValue={editingDriver?.name}
+                  className="w-full p-2 border rounded"
+                  required
+                />
+                <input
+                  name="email"
+                  type="email"
+                  placeholder="Email"
+                  defaultValue={editingDriver?.email}
+                  className="w-full p-2 border rounded"
+                  required
+                />
+                <input
+                  name="password"
+                  type="password"
+                  placeholder={
+                    editingDriver
+                      ? "Nova senha (opcional, mínimo 8 caracteres)"
+                      : "Senha Provisória (mínimo 8 caracteres)"
+                  }
+                  minLength={8}
+                  className="w-full p-2 border rounded"
+                  required={!editingDriver}
+                />
+                <input
+                  name="cpf"
+                  placeholder="CPF"
+                  defaultValue={editingDriver?.cpf || ""}
+                  className="w-full p-2 border rounded"
+                />
+                <input
+                  name="phone"
+                  placeholder="Telefone"
+                  defaultValue={editingDriver?.phone || ""}
+                  className="w-full p-2 border rounded"
+                />
               </div>
               <div className="mt-6 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsDriverModalOpen(false)}
+                  onClick={() => {
+                    setIsDriverModalOpen(false);
+                    setEditingDriver(null);
+                  }}
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
                 >
                   Cancelar

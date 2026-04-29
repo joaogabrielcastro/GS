@@ -500,4 +500,64 @@ export const authController = {
       return res.status(500).json({ error: "Erro ao listar usuários" });
     }
   },
+
+  async updateUser(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { email, password, name, cpf, phone, role, active } = req.body;
+
+      const updateData: Prisma.UserUpdateInput = {};
+      if (email !== undefined) updateData.email = email;
+      if (name !== undefined) updateData.name = name;
+      if (cpf !== undefined) updateData.cpf = cpf;
+      if (phone !== undefined) updateData.phone = phone;
+      if (role !== undefined) updateData.role = role;
+      if (active !== undefined) updateData.active = active;
+      if (password) {
+        updateData.password = await bcrypt.hash(password, 10);
+      }
+
+      const user = await prisma.user.update({
+        where: { id },
+        data: updateData,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          active: true,
+          phone: true,
+          cpf: true,
+          createdAt: true,
+        },
+      });
+
+      return res.json({ message: "Usuário atualizado com sucesso", user });
+    } catch (error: unknown) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        (error as { code?: string }).code === "P2002"
+      ) {
+        return res.status(409).json({ error: "Email ou CPF já cadastrado" });
+      }
+      return res.status(500).json({ error: "Erro ao atualizar usuário" });
+    }
+  },
+
+  async deleteUser(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+
+      await prisma.user.update({
+        where: { id },
+        data: { active: false },
+      });
+
+      return res.json({ message: "Usuário desativado com sucesso" });
+    } catch (error) {
+      return res.status(500).json({ error: "Erro ao desativar usuário" });
+    }
+  },
 };
