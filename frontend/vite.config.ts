@@ -56,4 +56,7 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    allowedHosts: ["gs.jwsoftware.com.br", "localhost", "127.0.0.1"],
+  },
 });
