@@ -279,6 +279,7 @@ export interface AuthResponse {
 export interface Truck {
   id: string;
   plate: string;
+  trailerPlates?: string[];
   model: string;
   brand: string;
   year: number;

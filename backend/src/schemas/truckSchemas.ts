@@ -8,6 +8,9 @@ export const truckIdParamSchema = z.object({
 
 export const createTruckBodySchema = z.object({
   plate: z.string().min(6, "Placa inválida"),
+  trailerPlates: z
+    .union([z.array(z.string().min(6)), z.string()])
+    .optional(),
   model: z.string().min(1, "Modelo obrigatório"),
   brand: z.string().min(1, "Marca obrigatória"),
   year: z.coerce.number().int().min(1950).max(2100),

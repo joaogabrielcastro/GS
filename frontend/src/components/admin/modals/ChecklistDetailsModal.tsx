@@ -60,6 +60,15 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
                 <span className="font-medium text-right">{checklist.truck?.plate}</span>
               </p>
               <p className="flex justify-between gap-3">
+                <span className="text-gray-500">Carretas:</span>
+                <span className="font-medium text-right">
+                  {checklist.truck?.trailerPlates &&
+                  checklist.truck.trailerPlates.length > 0
+                    ? checklist.truck.trailerPlates.join(", ")
+                    : "Não informado"}
+                </span>
+              </p>
+              <p className="flex justify-between gap-3">
                 <span className="text-gray-500">Hodômetro:</span>
                 <span className="font-medium text-right">
                   {checklist.odometer?.toLocaleString()} km

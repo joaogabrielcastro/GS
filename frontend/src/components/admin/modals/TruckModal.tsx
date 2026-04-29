@@ -34,10 +34,16 @@ const TruckModal: React.FC<TruckModalProps> = ({
           <div className="space-y-4">
             <input
               name="plate"
-              placeholder="Placa"
+              placeholder="Placa do cavalo"
               defaultValue={editingTruck?.plate}
               className="w-full p-2 border rounded"
               required
+            />
+            <textarea
+              name="trailerPlates"
+              placeholder="Placas das carretas (separadas por vírgula ou quebra de linha)"
+              defaultValue={editingTruck?.trailerPlates?.join(", ")}
+              className="w-full p-2 border rounded min-h-20"
             />
             <div className="grid grid-cols-2 gap-4">
               <input

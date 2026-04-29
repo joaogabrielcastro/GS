@@ -118,6 +118,7 @@ model RefreshToken {
 model Truck {
   id                String      @id @default(uuid())
   plate             String      @unique
+  trailerPlates     String[]    @default([])
   model             String
   brand             String
   year              Int

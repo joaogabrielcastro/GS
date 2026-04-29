@@ -3,12 +3,34 @@ import { Prisma, TruckStatus } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { logger } from "../lib/logger";
 
+function normalizePlate(value: string) {
+  return value.trim().toUpperCase();
+}
+
+function parseTrailerPlates(input: unknown): string[] {
+  if (Array.isArray(input)) {
+    return [...new Set(input.map((item) => normalizePlate(String(item))).filter(Boolean))];
+  }
+  if (typeof input === "string") {
+    return [
+      ...new Set(
+        input
+          .split(/[,\n;]+/)
+          .map((item) => normalizePlate(item))
+          .filter(Boolean),
+      ),
+    ];
+  }
+  return [];
+}
+
 export const truckController = {
   // Criar caminhão
   async create(req: Request, res: Response) {
     try {
       const {
         plate,
+        trailerPlates,
         model,
         brand,
         year,
@@ -22,6 +44,7 @@ export const truckController = {
       const truck = await prisma.truck.create({
         data: {
           plate: String(plate).trim().toUpperCase(),
+          trailerPlates: parseTrailerPlates(trailerPlates),
           model,
           brand,
           year: parseInt(String(year), 10),
@@ -149,6 +172,7 @@ export const truckController = {
       const { id } = req.params;
       const {
         plate,
+        trailerPlates,
         model,
         brand,
         year,
@@ -160,8 +184,18 @@ export const truckController = {
       } = req.body;
 
       const updateData: Prisma.TruckUpdateInput = {};
+      const existing = await prisma.truck.findUnique({
+        where: { id },
+        select: { trailerPlates: true },
+      });
+      if (!existing) {
+        return res.status(404).json({ error: "Caminhão não encontrado" });
+      }
       if (plate !== undefined)
         updateData.plate = String(plate).trim().toUpperCase();
+      if (trailerPlates !== undefined) {
+        updateData.trailerPlates = parseTrailerPlates(trailerPlates);
+      }
       if (model !== undefined) updateData.model = model;
       if (brand !== undefined) updateData.brand = brand;
       if (year !== undefined) updateData.year = parseInt(String(year), 10);
@@ -179,6 +213,22 @@ export const truckController = {
         where: { id },
         data: updateData,
       });
+
+      if (trailerPlates !== undefined) {
+        const previous = existing.trailerPlates;
+        const next = truck.trailerPlates;
+        if (JSON.stringify(previous) !== JSON.stringify(next)) {
+          await prisma.truckHistory.create({
+            data: {
+              truckId: id,
+              action: "COMPOSICAO_ATUALIZADA",
+              description: `Placas das carretas alteradas: ${
+                previous.length > 0 ? previous.join(", ") : "sem carretas"
+              } -> ${next.length > 0 ? next.join(", ") : "sem carretas"}`,
+            },
+          });
+        }
+      }
 
       res.json({ message: "Caminhão atualizado com sucesso", truck });
     } catch (error) {

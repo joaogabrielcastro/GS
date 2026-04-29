@@ -205,6 +205,7 @@ export const checklistController = {
                 id: true,
                 plate: true,
                 model: true,
+                trailerPlates: true,
               },
             },
             driver: {

@@ -40,6 +40,7 @@ const TrucksTab: React.FC<TrucksTabProps> = ({
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Placa</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Carretas</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Modelo</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipo / Eixos</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
@@ -52,6 +53,11 @@ const TrucksTab: React.FC<TrucksTabProps> = ({
               {trucks.map((truck) => (
                 <tr key={truck.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900">{truck.plate}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {truck.trailerPlates && truck.trailerPlates.length > 0
+                      ? truck.trailerPlates.join(", ")
+                      : "—"}
+                  </td>
                   <td className="px-6 py-4 text-gray-600">
                     {truck.brand} {truck.model} ({truck.year})
                   </td>
@@ -100,7 +106,7 @@ const TrucksTab: React.FC<TrucksTabProps> = ({
               ))}
               {trucks.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                     Nenhum caminhão cadastrado.
                   </td>
                 </tr>
