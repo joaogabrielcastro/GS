@@ -119,6 +119,9 @@ model Truck {
   id                String      @id @default(uuid())
   plate             String      @unique
   trailerPlates     String[]    @default([])
+  rntrc             String?
+  tareKg            Int?
+  payloadCapacityKg Int?
   model             String
   brand             String
   year              Int

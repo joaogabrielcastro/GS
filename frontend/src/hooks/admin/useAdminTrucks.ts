@@ -19,11 +19,15 @@ export function useAdminTrucks(active: boolean) {
   };
 
   const saveTruck = async (data: Record<string, FormDataEntryValue>) => {
+    const payload = Object.fromEntries(
+      Object.entries(data).filter(([, value]) => String(value).trim() !== ""),
+    );
+
     if (editingTruck?.id) {
-      await truckService.update(editingTruck.id, data);
+      await truckService.update(editingTruck.id, payload);
       toast.success("Caminhão atualizado!");
     } else {
-      await truckService.create(data);
+      await truckService.create(payload);
       toast.success("Caminhão criado!");
     }
     setIsModalOpen(false);

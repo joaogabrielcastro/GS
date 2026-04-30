@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { VEHICLE_TYPE_LABELS, type Truck, type VehicleType } from "@/types";
 
 interface TruckModalProps {
@@ -14,6 +14,32 @@ const TruckModal: React.FC<TruckModalProps> = ({
   onClose,
   onSubmit,
 }) => {
+  const [vehicleType, setVehicleType] = useState<VehicleType>(
+    editingTruck?.vehicleType || "TOCO",
+  );
+  const [trailerPlates, setTrailerPlates] = useState<string[]>(
+    editingTruck?.trailerPlates?.length
+      ? editingTruck.trailerPlates
+      : [""],
+  );
+
+  useEffect(() => {
+    setVehicleType(editingTruck?.vehicleType || "TOCO");
+    setTrailerPlates(
+      editingTruck?.trailerPlates?.length
+        ? editingTruck.trailerPlates
+        : [""],
+    );
+  }, [editingTruck, isOpen]);
+
+  const shouldShowTrailers = useMemo(
+    () =>
+      ["CARRETA_SIMPLES", "CARRETA_LS", "BITREM", "RODOTREM"].includes(
+        vehicleType,
+      ),
+    [vehicleType],
+  );
+
   if (!isOpen) return null;
 
   return (
@@ -27,6 +53,10 @@ const TruckModal: React.FC<TruckModalProps> = ({
             e.preventDefault();
             const form = e.target as HTMLFormElement;
             const formData = new FormData(form);
+            const cleanTrailerPlates = trailerPlates
+              .map((plate) => plate.trim().toUpperCase())
+              .filter(Boolean);
+            formData.set("trailerPlates", cleanTrailerPlates.join(","));
             await onSubmit(Object.fromEntries(formData.entries()));
           }}
         >
@@ -46,23 +76,58 @@ const TruckModal: React.FC<TruckModalProps> = ({
                     placeholder="Ex.: ABC1D23"
                     defaultValue={editingTruck?.plate}
                     className="w-full p-2 border rounded"
+                    pattern="[A-Za-z]{3}[0-9][A-Za-z0-9][0-9]{2}"
+                    title="Use o formato Mercosul, ex.: ABC1D23"
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Placas das carretas
-                  </label>
-                  <textarea
-                    name="trailerPlates"
-                    placeholder="Uma por linha ou separadas por vírgula"
-                    defaultValue={editingTruck?.trailerPlates?.join(", ")}
-                    className="w-full p-2 border rounded min-h-20"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Exemplo: XYZ9A88, QWE1B22
-                  </p>
-                </div>
+                {shouldShowTrailers && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-2">
+                      Placas das carretas
+                    </label>
+                    <div className="space-y-2">
+                      {trailerPlates.map((plate, index) => (
+                        <div key={`trailer-${index}`} className="flex items-center gap-2">
+                          <input
+                            value={plate}
+                            onChange={(event) => {
+                              const next = [...trailerPlates];
+                              next[index] = event.target.value.toUpperCase();
+                              setTrailerPlates(next);
+                            }}
+                            placeholder={`Carreta ${index + 1} (ex.: XYZ9A88)`}
+                            className="w-full p-2 border rounded"
+                            pattern="[A-Za-z]{3}[0-9][A-Za-z0-9][0-9]{2}"
+                            title="Use o formato Mercosul, ex.: ABC1D23"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (trailerPlates.length === 1) {
+                                setTrailerPlates([""]);
+                                return;
+                              }
+                              setTrailerPlates((prev) =>
+                                prev.filter((_, currentIndex) => currentIndex !== index),
+                              );
+                            }}
+                            className="px-2 py-1 text-red-600 hover:text-red-800"
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setTrailerPlates((prev) => [...prev, ""])}
+                      className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      + Adicionar carreta
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -70,6 +135,14 @@ const TruckModal: React.FC<TruckModalProps> = ({
               <h3 className="text-sm font-semibold text-gray-800 mb-3">
                 Dados do Veículo
               </h3>
+            <div className="grid grid-cols-1 gap-4 mb-4">
+              <input
+                name="rntrc"
+                placeholder="RNTRC (ANTT)"
+                defaultValue={editingTruck?.rntrc}
+                className="w-full p-2 border rounded"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <input
                 name="brand"
@@ -104,6 +177,24 @@ const TruckModal: React.FC<TruckModalProps> = ({
                 required
               />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <input
+                name="tareKg"
+                type="number"
+                min={0}
+                placeholder="Tara (kg)"
+                defaultValue={editingTruck?.tareKg}
+                className="w-full p-2 border rounded"
+              />
+              <input
+                name="payloadCapacityKg"
+                type="number"
+                min={0}
+                placeholder="Lotação (kg)"
+                defaultValue={editingTruck?.payloadCapacityKg}
+                className="w-full p-2 border rounded"
+              />
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Tipo de Veículo
@@ -111,6 +202,7 @@ const TruckModal: React.FC<TruckModalProps> = ({
               <select
                 name="vehicleType"
                 defaultValue={editingTruck?.vehicleType || "TOCO"}
+                onChange={(event) => setVehicleType(event.target.value as VehicleType)}
                 className="w-full p-2 border rounded"
               >
                 {(Object.keys(VEHICLE_TYPE_LABELS) as VehicleType[]).map((vt) => (

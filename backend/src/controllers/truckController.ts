@@ -31,6 +31,9 @@ export const truckController = {
       const {
         plate,
         trailerPlates,
+        rntrc,
+        tareKg,
+        payloadCapacityKg,
         model,
         brand,
         year,
@@ -45,6 +48,11 @@ export const truckController = {
         data: {
           plate: String(plate).trim().toUpperCase(),
           trailerPlates: parseTrailerPlates(trailerPlates),
+          rntrc: rntrc ? String(rntrc).trim() : null,
+          tareKg: tareKg ? parseInt(String(tareKg), 10) : null,
+          payloadCapacityKg: payloadCapacityKg
+            ? parseInt(String(payloadCapacityKg), 10)
+            : null,
           model,
           brand,
           year: parseInt(String(year), 10),
@@ -173,6 +181,9 @@ export const truckController = {
       const {
         plate,
         trailerPlates,
+        rntrc,
+        tareKg,
+        payloadCapacityKg,
         model,
         brand,
         year,
@@ -196,6 +207,13 @@ export const truckController = {
       if (trailerPlates !== undefined) {
         updateData.trailerPlates = parseTrailerPlates(trailerPlates);
       }
+      if (rntrc !== undefined) updateData.rntrc = rntrc ? String(rntrc).trim() : null;
+      if (tareKg !== undefined)
+        updateData.tareKg = tareKg ? parseInt(String(tareKg), 10) : null;
+      if (payloadCapacityKg !== undefined)
+        updateData.payloadCapacityKg = payloadCapacityKg
+          ? parseInt(String(payloadCapacityKg), 10)
+          : null;
       if (model !== undefined) updateData.model = model;
       if (brand !== undefined) updateData.brand = brand;
       if (year !== undefined) updateData.year = parseInt(String(year), 10);

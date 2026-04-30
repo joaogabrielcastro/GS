@@ -29,6 +29,9 @@ export const createTruckBodySchema = z.object({
     .optional(),
   acquisitionDate: z.string().datetime().optional(),
   totalKm: z.coerce.number().int().nonnegative().optional(),
+  rntrc: z.string().min(8).max(20).optional(),
+  tareKg: z.coerce.number().int().nonnegative().optional(),
+  payloadCapacityKg: z.coerce.number().int().nonnegative().optional(),
   notes: z.string().max(2000).optional(),
 });
 
