@@ -280,9 +280,6 @@ export interface Truck {
   id: string;
   plate: string;
   trailerPlates?: string[];
-  rntrc?: string;
-  tareKg?: number;
-  payloadCapacityKg?: number;
   model: string;
   brand: string;
   year: number;

@@ -135,13 +135,22 @@ const TruckModal: React.FC<TruckModalProps> = ({
               <h3 className="text-sm font-semibold text-gray-800 mb-3">
                 Dados do Veículo
               </h3>
-            <div className="grid grid-cols-1 gap-4 mb-4">
-              <input
-                name="rntrc"
-                placeholder="RNTRC (ANTT)"
-                defaultValue={editingTruck?.rntrc}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo de Veículo
+              </label>
+              <select
+                name="vehicleType"
+                value={vehicleType}
+                onChange={(event) => setVehicleType(event.target.value as VehicleType)}
                 className="w-full p-2 border rounded"
-              />
+              >
+                {(Object.keys(VEHICLE_TYPE_LABELS) as VehicleType[]).map((vt) => (
+                  <option key={vt} value={vt}>
+                    {VEHICLE_TYPE_LABELS[vt]}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <input
@@ -176,41 +185,6 @@ const TruckModal: React.FC<TruckModalProps> = ({
                 className="w-full p-2 border rounded"
                 required
               />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <input
-                name="tareKg"
-                type="number"
-                min={0}
-                placeholder="Tara (kg)"
-                defaultValue={editingTruck?.tareKg}
-                className="w-full p-2 border rounded"
-              />
-              <input
-                name="payloadCapacityKg"
-                type="number"
-                min={0}
-                placeholder="Lotação (kg)"
-                defaultValue={editingTruck?.payloadCapacityKg}
-                className="w-full p-2 border rounded"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo de Veículo
-              </label>
-              <select
-                name="vehicleType"
-                defaultValue={editingTruck?.vehicleType || "TOCO"}
-                onChange={(event) => setVehicleType(event.target.value as VehicleType)}
-                className="w-full p-2 border rounded"
-              >
-                {(Object.keys(VEHICLE_TYPE_LABELS) as VehicleType[]).map((vt) => (
-                  <option key={vt} value={vt}>
-                    {VEHICLE_TYPE_LABELS[vt]}
-                  </option>
-                ))}
-              </select>
             </div>
             <select
               name="status"
