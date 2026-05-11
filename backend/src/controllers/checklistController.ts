@@ -8,6 +8,7 @@ type ChecklistPhotoInput = {
   category: string;
   axleNumber?: number | string | null;
   side?: string | null;
+  tirePosition?: string | null;
   photoUrl: string;
   notes?: string | null;
 };
@@ -104,6 +105,7 @@ export const checklistController = {
                       category: p.category,
                       axleNumber: p.axleNumber ? parseInt(String(p.axleNumber), 10) : null,
                       side: p.side || null,
+                      tirePosition: p.tirePosition ? String(p.tirePosition).trim() : null,
                       photoUrl: p.photoUrl,
                       notes: p.notes || null,
                     })),
@@ -206,6 +208,8 @@ export const checklistController = {
                 plate: true,
                 model: true,
                 trailerPlates: true,
+                vehicleType: true,
+                spareCount: true,
               },
             },
             driver: {

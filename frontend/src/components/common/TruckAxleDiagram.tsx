@@ -1,6 +1,6 @@
 import React from "react";
 import type { AxleConfig } from "@/types";
-import { getTirePositionLabel } from "@/types";
+import { axlePositionCodes, getTirePositionLabel } from "@/types";
 
 type ChecklistAxleDiagramProps = {
   config: AxleConfig;
@@ -192,29 +192,4 @@ export function InteractiveAxleDiagram({
       </text>
     </svg>
   );
-}
-
-/** Agrupa eixos por `section` (igual ao checklist). */
-export function groupAxlesBySection(axles: AxleConfig[]): { section: string; axles: AxleConfig[] }[] {
-  return axles.reduce<{ section: string; axles: AxleConfig[] }[]>((acc, axle) => {
-    const sname = axle.section || "Veículo";
-    const found = acc.find((s) => s.section === sname);
-    if (found) found.axles.push(axle);
-    else acc.push({ section: sname, axles: [axle] });
-    return acc;
-  }, []);
-}
-
-export function axlePositionCodes(axle: AxleConfig): { left: string[]; right: string[] } {
-  const n = axle.axleNumber;
-  if (axle.tiresPerSide === "double") {
-    return {
-      left: [`E${n}EE`, `E${n}EI`],
-      right: [`E${n}DE`, `E${n}DI`],
-    };
-  }
-  return {
-    left: [`E${n}E`],
-    right: [`E${n}D`],
-  };
 }

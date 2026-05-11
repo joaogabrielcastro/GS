@@ -3,6 +3,11 @@ import { Plus } from "lucide-react";
 import Pagination from "@/components/Pagination";
 import { TRUCK_STATUS_LABELS, VEHICLE_TYPE_LABELS, type Truck, type TruckStatus, type VehicleType } from "@/types";
 
+function formatPlate(value?: string) {
+  if (!value) return "—";
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
 interface TrucksTabProps {
   trucks: Truck[];
   page: number;
@@ -54,10 +59,12 @@ const TrucksTab: React.FC<TrucksTabProps> = ({
             <tbody className="divide-y divide-gray-100">
               {trucks.map((truck) => (
                 <tr key={truck.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">{truck.plate}</td>
+                  <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                    {formatPlate(truck.plate)}
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {truck.trailerPlates && truck.trailerPlates.length > 0
-                      ? truck.trailerPlates.join(", ")
+                      ? truck.trailerPlates.map(formatPlate).join(", ")
                       : "—"}
                   </td>
                   <td className="px-6 py-4 text-gray-600">

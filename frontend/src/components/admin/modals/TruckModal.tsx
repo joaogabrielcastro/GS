@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { VEHICLE_TYPE_LABELS, type Truck, type VehicleType } from "@/types";
 
+function normalizePlateInput(value: string) {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 7);
+}
+
 interface TruckModalProps {
   isOpen: boolean;
   editingTruck: Truck | null;
@@ -19,7 +23,7 @@ const TruckModal: React.FC<TruckModalProps> = ({
   );
   const [trailerPlates, setTrailerPlates] = useState<string[]>(
     editingTruck?.trailerPlates?.length
-      ? editingTruck.trailerPlates
+      ? editingTruck.trailerPlates.map(normalizePlateInput)
       : [""],
   );
 
@@ -27,7 +31,7 @@ const TruckModal: React.FC<TruckModalProps> = ({
     setVehicleType(editingTruck?.vehicleType || "TOCO");
     setTrailerPlates(
       editingTruck?.trailerPlates?.length
-        ? editingTruck.trailerPlates
+        ? editingTruck.trailerPlates.map(normalizePlateInput)
         : [""],
     );
   }, [editingTruck, isOpen]);
@@ -74,7 +78,7 @@ const TruckModal: React.FC<TruckModalProps> = ({
                   <input
                     name="plate"
                     placeholder="Ex.: ABC1D23"
-                    defaultValue={editingTruck?.plate}
+                    defaultValue={editingTruck?.plate ? normalizePlateInput(editingTruck.plate) : ""}
                     className="w-full p-2 border rounded"
                     pattern="[A-Za-z]{3}[0-9][A-Za-z0-9][0-9]{2}"
                     title="Use o formato Mercosul, ex.: ABC1D23"
@@ -93,7 +97,7 @@ const TruckModal: React.FC<TruckModalProps> = ({
                             value={plate}
                             onChange={(event) => {
                               const next = [...trailerPlates];
-                              next[index] = event.target.value.toUpperCase();
+                              next[index] = normalizePlateInput(event.target.value);
                               setTrailerPlates(next);
                             }}
                             placeholder={`Carreta ${index + 1} (ex.: XYZ9A88)`}
@@ -151,6 +155,24 @@ const TruckModal: React.FC<TruckModalProps> = ({
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Estepes no checklist
+              </label>
+              <select
+                name="spareCount"
+                defaultValue={String(editingTruck?.spareCount ?? 1)}
+                className="w-full p-2 border rounded"
+                title="Quantidade de estepes com foto obrigatória no checklist diário"
+              >
+                <option value="0">0 estepe</option>
+                <option value="1">1 estepe</option>
+                <option value="2">2 estepes</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Define quantas fotos de estepe o motorista deve enviar (além dos pneus rodando).
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <input

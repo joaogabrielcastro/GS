@@ -4,7 +4,7 @@ import { prisma } from "../lib/prisma";
 import { logger } from "../lib/logger";
 
 function normalizePlate(value: string) {
-  return value.trim().toUpperCase();
+  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
 function parseTrailerPlates(input: unknown): string[] {
@@ -24,6 +24,12 @@ function parseTrailerPlates(input: unknown): string[] {
   return [];
 }
 
+function parseSpareCount(input: unknown): number {
+  const n = parseInt(String(input ?? "1"), 10);
+  if (Number.isNaN(n)) return 1;
+  return Math.min(2, Math.max(0, n));
+}
+
 export const truckController = {
   // Criar caminhão
   async create(req: Request, res: Response) {
@@ -38,6 +44,7 @@ export const truckController = {
         vehicleType,
         acquisitionDate,
         totalKm,
+        spareCount,
         notes,
       } = req.body;
 
@@ -54,6 +61,7 @@ export const truckController = {
             ? new Date(acquisitionDate)
             : undefined,
           totalKm: totalKm ? parseInt(String(totalKm), 10) : 0,
+          spareCount: spareCount !== undefined ? parseSpareCount(spareCount) : 1,
           notes,
         },
       });
@@ -180,6 +188,7 @@ export const truckController = {
         vehicleType,
         acquisitionDate,
         totalKm,
+        spareCount,
         notes,
       } = req.body;
 
@@ -207,6 +216,8 @@ export const truckController = {
           : null;
       if (totalKm !== undefined)
         updateData.totalKm = parseInt(String(totalKm), 10);
+      if (spareCount !== undefined)
+        updateData.spareCount = parseSpareCount(spareCount);
       if (notes !== undefined) updateData.notes = notes;
 
       const truck = await prisma.truck.update({

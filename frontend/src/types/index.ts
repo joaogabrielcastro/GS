@@ -222,25 +222,76 @@ export const VEHICLE_AXLES: Record<VehicleType, AxleConfig[]> = {
   ],
 };
 
-/** Retorna a lista de posições de pneu para o tipo de veículo (ex: E1E, E2EE, E2DI, ESTEPE1) */
-export function getTirePositions(vehicleType: VehicleType): string[] {
-  const axles = VEHICLE_AXLES[vehicleType];
-  const positions: string[] = [];
-  for (const axle of axles) {
-    const n = axle.axleNumber;
-    if (axle.tiresPerSide === "single") {
-      positions.push(`E${n}E`); // esquerdo
-      positions.push(`E${n}D`); // direito
-    } else {
-      positions.push(`E${n}EE`); // esquerdo externo
-      positions.push(`E${n}EI`); // esquerdo interno
-      positions.push(`E${n}DE`); // direito externo
-      positions.push(`E${n}DI`); // direito interno
-    }
+/** Códigos de posição por lado do eixo (alinhado ao desenho do checklist / cadastro de pneu). */
+export function axlePositionCodes(axle: AxleConfig): { left: string[]; right: string[] } {
+  const n = axle.axleNumber;
+  if (axle.tiresPerSide === "double") {
+    return {
+      left: [`E${n}EE`, `E${n}EI`],
+      right: [`E${n}DE`, `E${n}DI`],
+    };
   }
-  positions.push("ESTEPE1");
-  positions.push("ESTEPE2");
-  return positions;
+  return {
+    left: [`E${n}E`],
+    right: [`E${n}D`],
+  };
+}
+
+/** Agrupa eixos por `section` (cavalo / semirreboque). */
+export function groupAxlesBySection(axles: AxleConfig[]): { section: string; axles: AxleConfig[] }[] {
+  return axles.reduce<{ section: string; axles: AxleConfig[] }[]>((acc, axle) => {
+    const sname = axle.section || "Veículo";
+    const found = acc.find((s) => s.section === sname);
+    if (found) found.axles.push(axle);
+    else acc.push({ section: sname, axles: [axle] });
+    return acc;
+  }, []);
+}
+
+/**
+ * Posições com foto obrigatória no checklist: todos os pneus rodando + estepes (0–2).
+ */
+export function getChecklistTirePhotoSlots(
+  vehicleType: VehicleType,
+  spareCount: number,
+): string[] {
+  const axles = VEHICLE_AXLES[vehicleType];
+  const slots: string[] = [];
+  for (const axle of axles) {
+    const { left, right } = axlePositionCodes(axle);
+    slots.push(...left, ...right);
+  }
+  const n = Math.max(0, Math.min(2, Math.floor(spareCount)));
+  for (let i = 1; i <= n; i += 1) {
+    slots.push(`ESTEPE${i}`);
+  }
+  return slots;
+}
+
+/** Retorna a lista de posições de pneu para cadastro (inclui até 2 estepes). */
+export function getTirePositions(vehicleType: VehicleType): string[] {
+  return getChecklistTirePhotoSlots(vehicleType, 2);
+}
+
+/** Ordena fotos do checklist para exibição (cabine/lona → pneus por slot → legado por eixo). */
+export function sortChecklistPhotosForDisplay(
+  photos: { category: string; tirePosition?: string | null; axleNumber?: number | null }[],
+  vehicleType: VehicleType,
+  spareCount: number,
+): typeof photos {
+  const order = getChecklistTirePhotoSlots(vehicleType, spareCount);
+  const rank = (p: (typeof photos)[0]) => {
+    if (p.category === "CABINE") return -3;
+    if (p.category === "LONA") return -2;
+    if (p.category === "PNEU" && p.tirePosition) {
+      const i = order.indexOf(p.tirePosition);
+      return i >= 0 ? i : 900 + order.length;
+    }
+    if (p.category === "PNEU") return 800;
+    if (p.category === "EIXO") return 1000 + (p.axleNumber ?? 0) * 10;
+    return 2000;
+  };
+  return [...photos].sort((a, b) => rank(a) - rank(b));
 }
 
 export function getTirePositionLabel(pos: string): string {
@@ -280,6 +331,8 @@ export interface Truck {
   id: string;
   plate: string;
   trailerPlates?: string[];
+  /** Estepes com foto obrigatória no checklist (0–2). Padrão 1. */
+  spareCount?: number;
   model: string;
   brand: string;
   year: number;
@@ -346,6 +399,8 @@ export interface ChecklistPhoto {
   category: "CABINE" | "LONA" | "PNEU" | "EIXO";
   axleNumber?: number;
   side?: "ESQ" | "DIR";
+  /** Posição do pneu (ex.: E2EE, ESTEPE1) quando category = PNEU */
+  tirePosition?: string;
   photoUrl: string;
   notes?: string;
   createdAt: string;

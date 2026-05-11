@@ -36,6 +36,8 @@ export interface DriverStats {
     plate: string;
     model: string;
     brand: string;
+    vehicleType: string;
+    spareCount?: number;
   } | null;
   lastChecklist: {
     id: string;

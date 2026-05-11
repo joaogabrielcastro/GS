@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import {
+  axlePositionCodes,
   getTirePositionLabel,
+  groupAxlesBySection,
   TIRE_STATUS_LABELS,
   VEHICLE_AXLES,
   VEHICLE_TYPE_LABELS,
@@ -9,11 +11,7 @@ import {
   type VehicleType,
 } from "@/types";
 import type { Tire, Truck } from "@/types";
-import {
-  axlePositionCodes,
-  groupAxlesBySection,
-  InteractiveAxleDiagram,
-} from "@/components/common/TruckAxleDiagram";
+import { InteractiveAxleDiagram } from "@/components/common/TruckAxleDiagram";
 
 interface TireModalProps {
   isOpen: boolean;

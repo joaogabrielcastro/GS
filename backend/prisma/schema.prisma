@@ -130,6 +130,7 @@ model Truck {
   totalKm           Int         @default(0)
   notes             String?
   active            Boolean     @default(true)
+  spareCount        Int         @default(1) // estepes com foto obrigatória no checklist (0–2)
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
@@ -231,6 +232,7 @@ model ChecklistPhoto {
   axleNumber  Int?
   // Lado: ESQ | DIR | null (para fotos gerais)
   side        String?
+  tirePosition String? // ex.: E2EE, ESTEPE1 quando category = PNEU
   photoUrl    String
   notes       String?
   createdAt   DateTime @default(now())

@@ -13,6 +13,7 @@ const checklistPhotoSchema = z.object({
   category: z.string().min(1),
   axleNumber: z.coerce.number().int().positive().optional(),
   side: z.string().optional(),
+  tirePosition: z.string().min(1).max(32).optional(),
   photoUrl: z.string().min(1),
   notes: z.string().optional(),
 });

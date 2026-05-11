@@ -111,6 +111,7 @@ export const dashboardController = {
               model: driverTruck.model,
               brand: driverTruck.brand,
               vehicleType: driverTruck.vehicleType,
+              spareCount: driverTruck.spareCount,
             }
           : null,
         lastChecklist: lastChecklist
