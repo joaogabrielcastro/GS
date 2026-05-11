@@ -21,6 +21,33 @@ import { AlertCircle, CheckCircle, Plus, Truck, Users } from "lucide-react";
 import { toast } from "react-hot-toast";
 import type { AdminNotification, User } from "@/types";
 
+const ADMIN_TAB_META: Record<string, { title: string; description: string }> = {
+  "visao-geral": {
+    title: "Visão geral",
+    description: "Indicadores rápidos e últimas movimentações da frota.",
+  },
+  caminhoes: {
+    title: "Caminhões",
+    description: "Cadastro, composição (cavalo + carretas) e status da frota.",
+  },
+  motoristas: {
+    title: "Motoristas",
+    description: "Equipe habilitada e vínculo com os veículos.",
+  },
+  checklists: {
+    title: "Checklists",
+    description: "Conferência das inspeções diárias e fotos por posição de pneu.",
+  },
+  ocorrencias: {
+    title: "Ocorrências",
+    description: "Acompanhamento de eventos e pendências.",
+  },
+  pneus: {
+    title: "Gestão de pneus",
+    description: "Posição por eixo, vida útil e histórico por veículo.",
+  },
+};
+
 const getImageUrl = (path: string | null | undefined): string => {
   if (!path) return "";
   const normalized = path.replace(/\\/g, "/").trim();
@@ -62,7 +89,10 @@ const AdminDashboardContainer: React.FC = () => {
     () => localStorage.getItem("admin.activeTab") || "visao-geral",
   );
   const [stats, setStats] = useState<AdminStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    const t = localStorage.getItem("admin.activeTab") || "visao-geral";
+    return t === "visao-geral" || t === "motoristas";
+  });
   const [drivers, setDrivers] = useState<User[]>([]);
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -93,6 +123,10 @@ const AdminDashboardContainer: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (activeTab !== "visao-geral" && activeTab !== "motoristas") {
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         if (activeTab === "visao-geral") {
@@ -199,6 +233,11 @@ const AdminDashboardContainer: React.FC = () => {
     }
   };
 
+  const tabMeta = ADMIN_TAB_META[activeTab] ?? {
+    title: "Painel",
+    description: "",
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
       <AdminHeader
@@ -214,9 +253,22 @@ const AdminDashboardContainer: React.FC = () => {
       <AdminTabs activeTab={activeTab} onChange={setActiveTab} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <header className="mb-6 pt-1">
+          <h2 className="text-xl font-bold tracking-tight text-gray-900">{tabMeta.title}</h2>
+          {tabMeta.description ? (
+            <p className="text-sm text-gray-500 mt-1 max-w-3xl leading-relaxed">{tabMeta.description}</p>
+          ) : null}
+        </header>
+
         {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
+          <div
+            className="flex flex-col justify-center items-center min-h-[14rem] gap-3 rounded-xl border border-dashed border-gray-200 bg-white/80"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-200 border-t-primary-600" />
+            <p className="text-sm text-gray-500">Carregando…</p>
           </div>
         ) : (
           <>

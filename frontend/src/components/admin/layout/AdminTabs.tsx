@@ -17,25 +17,35 @@ const tabs = [
 
 const AdminTabs: React.FC<AdminTabsProps> = ({ activeTab, onChange }) => {
   return (
-    <div className="bg-white border-b mb-6">
+    <div className="bg-white border-b border-gray-200/80 mb-6 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <nav className="flex space-x-3 sm:space-x-8 overflow-x-auto pb-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => onChange(tab.id)}
-              className={`flex items-center gap-2 py-4 px-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
-                activeTab === tab.id
-                  ? "border-primary-600 text-primary-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              <tab.icon className="w-5 h-5" />
-              {tab.label}
-            </button>
-          ))}
+        <nav
+          className="flex gap-1 sm:gap-2 overflow-x-auto pb-0 pt-1 [-webkit-overflow-scrolling:touch] scroll-smooth [scrollbar-width:thin]"
+          role="tablist"
+          aria-label="Seções do painel administrativo"
+        >
+          {tabs.map((tab) => {
+            const selected = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => onChange(tab.id)}
+                className={`flex shrink-0 items-center gap-2 rounded-t-lg py-3.5 px-3 sm:px-4 border-b-2 font-medium text-sm whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2 ${
+                  selected
+                    ? "border-primary-600 text-primary-700 bg-primary-50/60"
+                    : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50/80 hover:border-gray-200"
+                }`}
+              >
+                <tab.icon className={`w-5 h-5 shrink-0 ${selected ? "text-primary-600" : ""}`} />
+                {tab.label}
+              </button>
+            );
+          })}
         </nav>
-        <p className="text-xs text-gray-500 mt-2 sm:hidden">
+        <p className="text-xs text-gray-500 pb-2 sm:hidden pt-1">
           Deslize as abas para o lado para acessar todas as opções.
         </p>
       </div>
