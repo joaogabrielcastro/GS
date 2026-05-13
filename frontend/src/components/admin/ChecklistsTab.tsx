@@ -1,7 +1,11 @@
 import React from "react";
 import { Eye } from "lucide-react";
 import Pagination from "@/components/Pagination";
-import type { DailyChecklist } from "@/types";
+import {
+  CHECKLIST_REVIEW_LABELS,
+  type ChecklistReviewStatus,
+  type DailyChecklist,
+} from "@/types";
 
 interface ChecklistsTabProps {
   checklists: DailyChecklist[];
@@ -31,7 +35,7 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[680px] text-left">
+          <table className="w-full min-w-[760px] text-left">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -47,6 +51,9 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
                   Motorista
                 </th>
                 <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Revisão
+                </th>
+                <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   KM
                 </th>
                 <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -55,39 +62,55 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {checklists.map((check) => (
-                <tr key={check.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-600">
-                    {new Date(check.createdAt).toLocaleDateString()}{" "}
-                    <span className="text-xs text-gray-400">
-                      {new Date(check.createdAt).toLocaleTimeString()}
-                    </span>
-                  </td>
-                  <td className="px-4 sm:px-6 py-4 text-sm font-medium text-gray-900">
-                    {check.truck?.plate}
-                  </td>
-                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-600">
-                    {check.truck?.trailerPlates && check.truck.trailerPlates.length > 0
-                      ? check.truck.trailerPlates.join(", ")
-                      : "—"}
-                  </td>
-                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-600">{check.driver?.name}</td>
-                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-600">
-                    {check.odometer?.toLocaleString()} km
-                  </td>
-                  <td className="px-4 sm:px-6 py-4 text-sm">
-                    <button
-                      onClick={() => onOpenDetails(check)}
-                      className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 whitespace-nowrap"
-                    >
-                      <Eye className="w-4 h-4" /> Ver detalhes
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {checklists.map((check) => {
+                const rs = (check.reviewStatus || "PENDENTE") as ChecklistReviewStatus;
+                return (
+                  <tr key={check.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 sm:px-6 py-4 text-sm text-gray-600">
+                      {new Date(check.createdAt).toLocaleDateString()}{" "}
+                      <span className="text-xs text-gray-400">
+                        {new Date(check.createdAt).toLocaleTimeString()}
+                      </span>
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 text-sm font-medium text-gray-900">
+                      {check.truck?.plate}
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 text-sm text-gray-600">
+                      {check.truck?.trailerPlates && check.truck.trailerPlates.length > 0
+                        ? check.truck.trailerPlates.join(", ")
+                        : "—"}
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 text-sm text-gray-600">{check.driver?.name}</td>
+                    <td className="px-4 sm:px-6 py-4">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          rs === "APROVADO"
+                            ? "bg-green-100 text-green-800"
+                            : rs === "PENDENTE"
+                              ? "bg-amber-100 text-amber-900"
+                              : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {CHECKLIST_REVIEW_LABELS[rs]}
+                      </span>
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 text-sm text-gray-600">
+                      {check.odometer?.toLocaleString()} km
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 text-sm">
+                      <button
+                        onClick={() => onOpenDetails(check)}
+                        className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 whitespace-nowrap"
+                      >
+                        <Eye className="w-4 h-4" /> Ver detalhes
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
               {checklists.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                     Nenhum checklist encontrado.
                   </td>
                 </tr>

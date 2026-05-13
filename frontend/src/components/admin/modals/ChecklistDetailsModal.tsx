@@ -1,20 +1,24 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { FileText } from "lucide-react";
 import ImageWithFallback from "@/components/common/ImageWithFallback";
-import api from "@/services/api";
+import api, { checklistService, getApiErrorMessage } from "@/services/api";
 import {
+  CHECKLIST_REVIEW_LABELS,
   getTirePositionLabel,
   sortChecklistPhotosForDisplay,
   type ChecklistPhoto,
+  type ChecklistReviewStatus,
   type DailyChecklist,
   type VehicleType,
 } from "@/types";
+import toast from "react-hot-toast";
 
 interface ChecklistDetailsModalProps {
   isOpen: boolean;
   checklist: DailyChecklist | null;
   onClose: () => void;
   getImageUrl: (path: string | null | undefined) => string;
+  onReviewed?: () => void | Promise<void>;
 }
 
 const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
@@ -22,7 +26,9 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
   checklist,
   onClose,
   getImageUrl,
+  onReviewed,
 }) => {
+  const [reviewSubmitting, setReviewSubmitting] = useState<false | "APROVADO" | "REJEITADO">(false);
   const sortedPhotos = useMemo(() => {
     if (!checklist?.photos?.length) return [] as ChecklistPhoto[];
     const vt = checklist.truck?.vehicleType as VehicleType | undefined;
@@ -37,6 +43,23 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
   }, [checklist]);
 
   if (!isOpen || !checklist) return null;
+
+  const reviewSt = (checklist.reviewStatus || "PENDENTE") as ChecklistReviewStatus;
+
+  const handleReview = async (next: "APROVADO" | "REJEITADO") => {
+    if (!onReviewed) return;
+    setReviewSubmitting(next);
+    try {
+      await checklistService.review(checklist.id, { reviewStatus: next });
+      toast.success(next === "APROVADO" ? "Checklist aprovado." : "Checklist rejeitado.");
+      await onReviewed();
+      onClose();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao salvar revisão."));
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
 
   const cabinUrl =
     checklist.cabinPhotoUrl ??
@@ -80,10 +103,39 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
         >
           &times;
         </button>
-        <h2 className="text-xl sm:text-2xl font-bold mb-6 flex items-center gap-2 pr-8">
+        <h2 className="text-xl sm:text-2xl font-bold mb-4 flex items-center gap-2 pr-8">
           <FileText className="w-6 h-6 text-blue-600" />
           Detalhes do Checklist
         </h2>
+
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50/90 px-4 py-3">
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Revisão administrativa
+            </p>
+            <p className="text-sm font-medium text-gray-900 mt-1">{CHECKLIST_REVIEW_LABELS[reviewSt]}</p>
+          </div>
+          {reviewSt === "PENDENTE" && onReviewed ? (
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <button
+                type="button"
+                disabled={!!reviewSubmitting}
+                onClick={() => void handleReview("APROVADO")}
+                className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50"
+              >
+                {reviewSubmitting === "APROVADO" ? "Salvando…" : "Aprovar"}
+              </button>
+              <button
+                type="button"
+                disabled={!!reviewSubmitting}
+                onClick={() => void handleReview("REJEITADO")}
+                className="px-4 py-2 rounded-lg bg-white border border-red-300 text-red-700 text-sm font-semibold hover:bg-red-50 disabled:opacity-50"
+              >
+                {reviewSubmitting === "REJEITADO" ? "Salvando…" : "Rejeitar"}
+              </button>
+            </div>
+          ) : null}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-gray-50 p-4 rounded-lg">

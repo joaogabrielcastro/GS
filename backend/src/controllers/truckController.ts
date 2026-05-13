@@ -85,8 +85,9 @@ export const truckController = {
   // Listar caminhões
   async list(req: Request, res: Response) {
     try {
-      const { status, active, page, limit } = req.query;
+      const { status, active, page, limit, search } = req.query;
       const statusValue = typeof status === "string" ? status : undefined;
+      const searchRaw = typeof search === "string" ? search.trim() : "";
 
       const take = limit ? Math.min(Number(limit), 200) : undefined;
       const skip = page && take ? (Number(page) - 1) * take : undefined;
@@ -94,6 +95,24 @@ export const truckController = {
       const where: Prisma.TruckWhereInput = {};
       if (statusValue) where.status = statusValue as TruckStatus;
       if (active !== undefined) where.active = active === "true";
+
+      if (searchRaw) {
+        const normPlate = normalizePlate(searchRaw);
+        const orFilters: Prisma.TruckWhereInput[] = [
+          { plate: { contains: searchRaw, mode: "insensitive" } },
+          { brand: { contains: searchRaw, mode: "insensitive" } },
+          { model: { contains: searchRaw, mode: "insensitive" } },
+          {
+            currentDriver: {
+              is: { name: { contains: searchRaw, mode: "insensitive" } },
+            },
+          },
+        ];
+        if (normPlate.length >= 5) {
+          orFilters.push({ trailerPlates: { has: normPlate } });
+        }
+        where.AND = [...(Array.isArray(where.AND) ? where.AND : []), { OR: orFilters }];
+      }
 
       const [trucks, total] = await Promise.all([
         prisma.truck.findMany({

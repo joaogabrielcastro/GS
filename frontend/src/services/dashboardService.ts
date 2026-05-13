@@ -38,12 +38,15 @@ export interface DriverStats {
     brand: string;
     vehicleType: string;
     spareCount?: number;
+    /** Pneus ativos no caminhão (para ex. marca no checklist). */
+    tires?: { position: string; brand: string }[];
   } | null;
   lastChecklist: {
     id: string;
     date: string;
     truckPlate: string;
     isApproved: boolean;
+    reviewStatus?: "PENDENTE" | "APROVADO" | "REJEITADO";
   } | null;
   recentOccurrences: Array<{
     id: string;

@@ -257,18 +257,32 @@ const DashboardMotorista: React.FC = () => {
               {stats?.lastChecklist ? (
                 <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
                   <div
-                    className={`p-3 rounded-full ${stats.lastChecklist.isApproved ? "bg-green-100" : "bg-red-100"}`}
+                    className={`p-3 rounded-full ${
+                      stats.lastChecklist.reviewStatus === "APROVADO" || stats.lastChecklist.isApproved
+                        ? "bg-green-100"
+                        : stats.lastChecklist.reviewStatus === "REJEITADO"
+                          ? "bg-red-100"
+                          : "bg-amber-100"
+                    }`}
                   >
                     <ClipboardCheck
-                      className={`w-5 h-5 ${stats.lastChecklist.isApproved ? "text-green-600" : "text-red-600"}`}
+                      className={`w-5 h-5 ${
+                        stats.lastChecklist.reviewStatus === "APROVADO" || stats.lastChecklist.isApproved
+                          ? "text-green-600"
+                          : stats.lastChecklist.reviewStatus === "REJEITADO"
+                            ? "text-red-600"
+                            : "text-amber-600"
+                      }`}
                     />
                   </div>
                   <div className="flex-1">
                     <h4 className="font-semibold text-gray-900 text-sm">
-                      Checklist{" "}
-                      {stats.lastChecklist.isApproved
+                      Checklist —{" "}
+                      {stats.lastChecklist.reviewStatus === "APROVADO" || stats.lastChecklist.isApproved
                         ? "Aprovado"
-                        : "Com Problemas"}
+                        : stats.lastChecklist.reviewStatus === "REJEITADO"
+                          ? "Rejeitado"
+                          : "Aguardando análise"}
                     </h4>
                     <p className="text-xs text-gray-500">
                       {new Date(stats.lastChecklist.date).toLocaleDateString()}{" "}

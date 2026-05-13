@@ -19,7 +19,12 @@ import { useAdminTrucks } from "@/hooks/admin/useAdminTrucks";
 import { useAdminTires } from "@/hooks/admin/useAdminTires";
 import { AlertCircle, CheckCircle, Plus, Truck, Users } from "lucide-react";
 import { toast } from "react-hot-toast";
-import type { AdminNotification, User } from "@/types";
+import {
+  CHECKLIST_REVIEW_LABELS,
+  type AdminNotification,
+  type ChecklistReviewStatus,
+  type User,
+} from "@/types";
 
 const ADMIN_TAB_META: Record<string, { title: string; description: string }> = {
   "visao-geral": {
@@ -330,12 +335,14 @@ const AdminDashboardContainer: React.FC = () => {
                                 className={`text-xs font-bold px-2 py-1 rounded-full ${
                                   check.status === "APROVADO"
                                     ? "bg-green-100 text-green-700"
-                                    : check.status === "ATENÇÃO"
-                                      ? "bg-yellow-100 text-yellow-700"
+                                    : check.status === "PENDENTE"
+                                      ? "bg-amber-100 text-amber-800"
                                       : "bg-red-100 text-red-700"
                                 }`}
                               >
-                                {check.status}
+                                {["PENDENTE", "APROVADO", "REJEITADO"].includes(check.status)
+                                  ? CHECKLIST_REVIEW_LABELS[check.status as ChecklistReviewStatus]
+                                  : check.status}
                               </span>
                             </div>
                             <p className="text-xs text-gray-400 mt-2 text-right">
@@ -358,6 +365,8 @@ const AdminDashboardContainer: React.FC = () => {
                 page={trucks.page}
                 total={trucks.total}
                 totalPages={trucks.totalPages}
+                search={trucks.search}
+                onSearchChange={trucks.setSearch}
                 onPageChange={trucks.setPage}
                 onNewTruck={() => {
                   trucks.setEditingTruck(null);
@@ -606,6 +615,17 @@ const AdminDashboardContainer: React.FC = () => {
         checklist={checklists.selectedChecklist}
         onClose={() => checklists.setIsChecklistModalOpen(false)}
         getImageUrl={getImageUrl}
+        onReviewed={async () => {
+          await checklists.reload();
+          if (activeTab === "visao-geral") {
+            try {
+              const data = await dashboardService.getAdminStats();
+              setStats(data);
+            } catch {
+              toast.error("Erro ao atualizar visão geral.");
+            }
+          }
+        }}
       />
 
       <TireModal

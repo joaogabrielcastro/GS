@@ -406,6 +406,14 @@ export interface ChecklistPhoto {
   createdAt: string;
 }
 
+export type ChecklistReviewStatus = "PENDENTE" | "APROVADO" | "REJEITADO";
+
+export const CHECKLIST_REVIEW_LABELS: Record<ChecklistReviewStatus, string> = {
+  PENDENTE: "Aguardando análise",
+  APROVADO: "Aprovado",
+  REJEITADO: "Rejeitado",
+};
+
 export interface DailyChecklist {
   id: string;
   truckId: string;
@@ -420,6 +428,7 @@ export interface DailyChecklist {
   location?: string;
   latitude?: number;
   longitude?: number;
+  reviewStatus?: ChecklistReviewStatus;
   cabinPhotoUrl?: string;
   tiresPhotoUrl?: string;
   canvasPhotoUrl?: string;

@@ -53,12 +53,7 @@ export const dashboardController = {
           description: `Checklist realizado em ${check.truck.plate}`,
           user: check.driver.name,
           date: check.createdAt,
-          status:
-            check.overallCondition === "BOM"
-              ? "APROVADO"
-              : check.overallCondition === "REGULAR"
-                ? "ATENÇÃO"
-                : "REJEITADO",
+          status: check.reviewStatus,
         })),
       });
     } catch (error) {
@@ -86,7 +81,15 @@ export const dashboardController = {
 
       const [driverTruck, lastChecklist, recentOccurrences, tripsThisMonth] =
         await Promise.all([
-          prisma.truck.findFirst({ where: { currentDriverId: userId } }),
+          prisma.truck.findFirst({
+            where: { currentDriverId: userId },
+            include: {
+              tires: {
+                where: { active: true },
+                select: { position: true, brand: true },
+              },
+            },
+          }),
           prisma.dailyChecklist.findFirst({
             where: { driverId: userId },
             orderBy: { createdAt: "desc" },
@@ -112,6 +115,10 @@ export const dashboardController = {
               brand: driverTruck.brand,
               vehicleType: driverTruck.vehicleType,
               spareCount: driverTruck.spareCount,
+              tires: driverTruck.tires.map((t) => ({
+                position: t.position,
+                brand: t.brand,
+              })),
             }
           : null,
         lastChecklist: lastChecklist
@@ -119,7 +126,8 @@ export const dashboardController = {
               id: lastChecklist.id,
               date: lastChecklist.createdAt,
               truckPlate: lastChecklist.truck.plate,
-              isApproved: lastChecklist.overallCondition === "BOM",
+              isApproved: lastChecklist.reviewStatus === "APROVADO",
+              reviewStatus: lastChecklist.reviewStatus,
             }
           : null,
         recentOccurrences: recentOccurrences.map((occ) => ({

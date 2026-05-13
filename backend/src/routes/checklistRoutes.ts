@@ -7,6 +7,7 @@ import {
   checklistIdParamSchema,
   createChecklistBodySchema,
   listChecklistsQuerySchema,
+  reviewChecklistBodySchema,
 } from "../schemas/checklistSchemas";
 
 const router = Router();
@@ -28,6 +29,17 @@ router.post(
   checklistController.create,
 );
 router.get("/", validate({ query: listChecklistsQuerySchema }), checklistController.list);
+
+router.patch(
+  "/:id/review",
+  authorize("ADMINISTRADOR"),
+  validate({
+    params: checklistIdParamSchema,
+    body: reviewChecklistBodySchema,
+  }),
+  checklistController.review,
+);
+
 router.get("/:id", validate({ params: checklistIdParamSchema }), checklistController.getById);
 
 export default router;

@@ -97,6 +97,7 @@ export const checklistController = {
           location,
           latitude: latitude ? parseFloat(latitude) : undefined,
           longitude: longitude ? parseFloat(longitude) : undefined,
+          reviewStatus: "PENDENTE",
           photos:
             photos.length > 0
               ? {
@@ -263,9 +264,57 @@ export const checklistController = {
         return res.status(404).json({ error: "Checklist não encontrado" });
       }
 
+      if (req.user?.role === "MOTORISTA" && checklist.driverId !== req.user?.id) {
+        return res.status(403).json({ error: "Acesso negado" });
+      }
+
       return res.json(checklist);
     } catch (error) {
       return res.status(500).json({ error: "Erro ao buscar checklist" });
+    }
+  },
+
+  async review(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { reviewStatus } = req.body as { reviewStatus: "APROVADO" | "REJEITADO" };
+
+      const existing = await prisma.dailyChecklist.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+      if (!existing) {
+        return res.status(404).json({ error: "Checklist não encontrado" });
+      }
+
+      const checklist = await prisma.dailyChecklist.update({
+        where: { id },
+        data: { reviewStatus },
+        include: {
+          truck: {
+            select: {
+              id: true,
+              plate: true,
+              model: true,
+              trailerPlates: true,
+              vehicleType: true,
+              spareCount: true,
+            },
+          },
+          driver: {
+            select: { id: true, name: true, email: true },
+          },
+          photos: { orderBy: { axleNumber: "asc" } },
+        },
+      });
+
+      return res.json({ message: "Revisão registrada", checklist });
+    } catch (error) {
+      logger.error("Erro ao revisar checklist", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return res.status(500).json({ error: "Erro ao revisar checklist" });
     }
   },
 

@@ -165,11 +165,12 @@ export interface PaginatedResponse<T> {
 }
 
 export const truckService = {
-  list: async (opts?: { page?: number; limit?: number; status?: string }) => {
+  list: async (opts?: { page?: number; limit?: number; status?: string; search?: string }) => {
     const params: Record<string, string> = {};
     if (opts?.page) params.page = String(opts.page);
     if (opts?.limit) params.limit = String(opts.limit);
     if (opts?.status) params.status = opts.status;
+    if (opts?.search?.trim()) params.search = opts.search.trim();
     const response = await api.get("/trucks", { params });
     return response.data as PaginatedResponse<Truck>;
   },
@@ -224,6 +225,10 @@ export const checklistService = {
   getById: async (id: string) => {
     const response = await api.get(`/checklists/${id}`);
     return response.data as DailyChecklist;
+  },
+  review: async (id: string, body: { reviewStatus: "APROVADO" | "REJEITADO" }) => {
+    const response = await api.patch(`/checklists/${id}/review`, body);
+    return response.data as { message: string; checklist: DailyChecklist };
   },
 };
 

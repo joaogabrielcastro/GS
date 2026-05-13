@@ -9,6 +9,10 @@ export const checklistIdParamSchema = z.object({
   id: uuidSchema,
 });
 
+export const reviewChecklistBodySchema = z.object({
+  reviewStatus: z.enum(["APROVADO", "REJEITADO"]),
+});
+
 const checklistPhotoSchema = z.object({
   category: z.string().min(1),
   axleNumber: z.coerce.number().int().positive().optional(),

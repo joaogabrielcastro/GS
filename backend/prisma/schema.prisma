@@ -53,6 +53,12 @@ enum OccurrenceStatus {
   RESOLVIDO
 }
 
+enum ChecklistReviewStatus {
+  PENDENTE
+  APROVADO
+  REJEITADO
+}
+
 // TirePosition foi substituído por String dinâmica (ex: E1E, E2EE, E2DI, ESTEPE1)
 // Posições variam conforme o tipo de veículo
 
@@ -208,6 +214,7 @@ model DailyChecklist {
   location          String?
   latitude          Float?
   longitude         Float?
+  reviewStatus      ChecklistReviewStatus @default(PENDENTE)
   createdAt         DateTime @default(now())
 
   // Relations

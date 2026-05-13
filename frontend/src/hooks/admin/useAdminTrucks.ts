@@ -6,13 +6,18 @@ import type { Truck } from "@/types";
 export function useAdminTrucks(active: boolean) {
   const [items, setItems] = useState<Truck[]>([]);
   const [page, setPage] = useState(1);
+  const [search, setSearchState] = useState("");
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTruck, setEditingTruck] = useState<Truck | null>(null);
 
   const load = async () => {
-    const result = await truckService.list({ page, limit: 10 });
+    const result = await truckService.list({
+      page,
+      limit: 10,
+      search: search.trim() || undefined,
+    });
     setItems(result.data);
     setTotal(result.total);
     setTotalPages(result.totalPages);
@@ -45,11 +50,18 @@ export function useAdminTrucks(active: boolean) {
     if (!active) return;
     load().catch(() => toast.error("Erro ao carregar caminhões"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, page]);
+  }, [active, page, search]);
+
+  const setSearch = (value: string) => {
+    setSearchState(value);
+    setPage(1);
+  };
 
   return {
     items,
     page,
+    search,
+    setSearch,
     total,
     totalPages,
     setPage,

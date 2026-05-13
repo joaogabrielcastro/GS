@@ -17,12 +17,15 @@ import { ArrowLeft, Camera, CheckCircle, AlertTriangle } from "lucide-react";
 
 const PhotoButton = ({
   label,
+  subLabel,
   fieldName,
   preview,
   onChange,
   compact,
 }: {
   label: string;
+  /** Texto extra abaixo do rótulo (ex.: marca do pneu cadastrado). */
+  subLabel?: string;
   fieldName: string;
   preview: string | null;
   onChange: (fieldName: string, file: File) => void;
@@ -42,9 +45,16 @@ const PhotoButton = ({
         <Camera className={compact ? "w-5 h-5 text-gray-400" : "w-6 h-6 text-gray-400"} />
       )}
     </div>
-    <span className={`font-medium text-gray-600 ${compact ? "text-[10px] leading-tight text-center max-w-[4.5rem]" : "text-xs"}`}>
+    <span
+      className={`font-medium text-gray-600 ${compact ? "text-[10px] leading-tight text-center max-w-[5.5rem]" : "text-xs"}`}
+    >
       {label}
     </span>
+    {subLabel ? (
+      <span className="text-[9px] leading-tight text-center text-gray-500 max-w-[5.5rem] line-clamp-2">
+        {subLabel}
+      </span>
+    ) : null}
     {preview && <CheckCircle className="w-3 h-3 text-green-500" />}
     <input
       type="file"
@@ -117,6 +127,15 @@ const ChecklistPage: React.FC = () => {
       truck.spareCount ?? 1,
     );
   }, [truck?.vehicleType, truck?.spareCount]);
+
+  const tireBrandByPosition = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const t of truck?.tires ?? []) {
+      const b = typeof t.brand === "string" ? t.brand.trim() : "";
+      if (t.position && b) m.set(t.position, b);
+    }
+    return m;
+  }, [truck?.tires]);
 
   const axleSections = useMemo(() => groupAxlesBySection(axles), [axles]);
 
@@ -411,6 +430,7 @@ const ChecklistPage: React.FC = () => {
                             <PhotoButton
                               key={code}
                               label={getTirePositionLabel(code)}
+                              subLabel={tireBrandByPosition.get(code)}
                               fieldName={`tire_${code}`}
                               preview={photoPreviews[`tire_${code}`] ?? null}
                               onChange={handlePhotoChange}
@@ -435,6 +455,7 @@ const ChecklistPage: React.FC = () => {
                     <PhotoButton
                       key={code}
                       label={getTirePositionLabel(code)}
+                      subLabel={tireBrandByPosition.get(code)}
                       fieldName={`tire_${code}`}
                       preview={photoPreviews[`tire_${code}`] ?? null}
                       onChange={handlePhotoChange}
