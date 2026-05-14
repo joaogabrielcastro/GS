@@ -53,6 +53,17 @@ export const authController = {
     };
   },
 
+  /** Opções para `clearCookie` — sem `maxAge` (deprecado no Express 5). */
+  getClearCookieOptions() {
+    const o = authController.getCookieOptions();
+    return {
+      httpOnly: o.httpOnly,
+      secure: o.secure,
+      sameSite: o.sameSite,
+      path: o.path,
+    };
+  },
+
   hashToken(token: string) {
     return crypto.createHash("sha256").update(token).digest("hex");
   },
@@ -263,7 +274,7 @@ export const authController = {
         });
         res.clearCookie(
           authController.refreshCookieName,
-          authController.getCookieOptions(),
+          authController.getClearCookieOptions(),
         );
         return res.status(401).json({ error: "Sessão inválida. Faça login novamente." });
       }
@@ -282,7 +293,7 @@ export const authController = {
         }
         res.clearCookie(
           authController.refreshCookieName,
-          authController.getCookieOptions(),
+          authController.getClearCookieOptions(),
         );
         return res.status(401).json({ error: "Refresh token inválido" });
       }
@@ -375,7 +386,7 @@ export const authController = {
 
       res.clearCookie(
         authController.refreshCookieName,
-        authController.getCookieOptions(),
+        authController.getClearCookieOptions(),
       );
       return res.json({ message: "Logout realizado com sucesso" });
     } catch (error) {

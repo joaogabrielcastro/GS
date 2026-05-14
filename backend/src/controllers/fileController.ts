@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { logger } from "../lib/logger";
 
 const uploadRoot = path.resolve(process.env.UPLOAD_PATH || "./uploads");
 
@@ -89,6 +90,14 @@ export const fileController = {
             return res.sendFile(legacyTarget);
           }
         }
+        logger.warn("private_file_missing", {
+          category,
+          filename: safeFilename,
+          expectedPath: target,
+          uploadRoot,
+          hint:
+            "Confirme volume persistente em UPLOAD_PATH e que os ficheiros existem no disco (redeploy apaga /app/uploads sem volume).",
+        });
         return res.status(404).json({ error: "Arquivo não encontrado" });
       }
 
