@@ -41,9 +41,15 @@ if (process.env.NODE_ENV === "production" && uploadPath.startsWith("./")) {
   });
 }
 
-// Confiar em 1 nível de proxy (Railway, Heroku, etc.)
-// Usar o número 1 em vez de `true` para evitar bypass de rate-limit.
-app.set("trust proxy", 1);
+// Proxy reverso (Coolify, etc.): padrão 1 hop. TRUST_PROXY=true confia em toda a cadeia (só se necessário).
+const trustProxyEnv = process.env.TRUST_PROXY?.trim();
+const trustProxy: boolean | number =
+  trustProxyEnv === "true"
+    ? true
+    : trustProxyEnv && !Number.isNaN(Number(trustProxyEnv))
+      ? Number(trustProxyEnv)
+      : 1;
+app.set("trust proxy", trustProxy);
 
 // Configurar origens permitidas via env
 const allowedOrigins: string[] = process.env.CORS_ORIGIN
@@ -113,15 +119,6 @@ app.use(
   }),
 );
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // limite de 100 requisições por IP
-  message: "Muitas requisições deste IP, tente novamente mais tarde.",
-});
-
-app.use("/api/", limiter);
-
 // Body parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -130,11 +127,21 @@ app.use(requestLogger);
 app.use(errorResponseNormalizer);
 app.use(successResponseWrapper);
 
-// Rotas
+// Health fora do rate limit (evita healthcheck do painel consumindo cota e falhas em rajada)
 app.get("/api/health", (_req, res) => {
   res.json({ status: "OK", timestamp: new Date().toISOString() });
 });
 
+// Rate limiting (não aplicar em /api/health — já declarada acima)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 300, // hard refresh + SPA dispara várias chamadas; 100 era fácil estourar em uso real
+  message: "Muitas requisições deste IP, tente novamente mais tarde.",
+});
+
+app.use("/api/", limiter);
+
+// Rotas
 app.get("/", (_req, res) => {
   res.send("API Transportadora rodando 🚀");
 });
