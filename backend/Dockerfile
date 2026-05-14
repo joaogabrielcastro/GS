@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
   && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/prisma ./prisma
 COPY package.json package-lock.json ./
 EXPOSE 3000
 # Com pasta prisma/migrations no repositório, troque por:
