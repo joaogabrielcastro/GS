@@ -96,7 +96,7 @@ const AdminDashboardContainer: React.FC = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(() => {
     const t = localStorage.getItem("admin.activeTab") || "visao-geral";
-    return t === "visao-geral" || t === "motoristas";
+    return t === "visao-geral";
   });
   const [drivers, setDrivers] = useState<User[]>([]);
   const [driverSearch, setDriverSearch] = useState("");
@@ -143,6 +143,7 @@ const AdminDashboardContainer: React.FC = () => {
     })();
     return () => {
       cancelled = true;
+      setLoading(false);
     };
   }, [activeTab]);
 
@@ -151,7 +152,6 @@ const AdminDashboardContainer: React.FC = () => {
     let cancelled = false;
     (async () => {
       try {
-        setLoading(true);
         const data = await authService.listUsers(
           "MOTORISTA",
           driverSearch.trim() || undefined,
@@ -159,8 +159,6 @@ const AdminDashboardContainer: React.FC = () => {
         if (!cancelled) setDrivers(data);
       } catch {
         if (!cancelled) toast.error("Erro ao carregar dados.");
-      } finally {
-        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
