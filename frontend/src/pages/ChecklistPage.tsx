@@ -206,6 +206,7 @@ const ChecklistPage: React.FC = () => {
         cabinCondition,
         canvasCondition,
         notes,
+        odometer: truck.totalKm ?? 0,
         checklistPhotos: JSON.stringify(checklistPhotos),
       });
 

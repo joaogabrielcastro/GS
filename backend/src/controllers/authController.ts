@@ -488,9 +488,27 @@ export const authController = {
   // Listar usuários (Admin)
   async list(req: Request, res: Response) {
     try {
-      const { role } = req.query;
+      const { role, search } = req.query;
       const where: Prisma.UserWhereInput = {};
       if (role) where.role = role as UserRole;
+
+      const searchRaw = typeof search === "string" ? search.trim() : "";
+      if (searchRaw) {
+        const digits = searchRaw.replace(/\D/g, "");
+        where.AND = [
+          ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+          {
+            OR: [
+              { name: { contains: searchRaw, mode: "insensitive" } },
+              { email: { contains: searchRaw, mode: "insensitive" } },
+              { phone: { contains: searchRaw, mode: "insensitive" } },
+              ...(digits.length >= 3
+                ? [{ cpf: { contains: digits, mode: "insensitive" as const } }]
+                : []),
+            ],
+          },
+        ];
+      }
 
       const users = await prisma.user.findMany({
         where,

@@ -4,6 +4,10 @@ import { prisma } from "../lib/prisma";
 import { buildPrivateFileUrl } from "../lib/storage";
 import { logger } from "../lib/logger";
 
+function normalizePlate(value: string) {
+  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
 type ChecklistPhotoInput = {
   category: string;
   axleNumber?: number | string | null;
@@ -34,6 +38,7 @@ export const checklistController = {
         location,
         latitude,
         longitude,
+        odometer,
         // Array of {category, axleNumber?, side?, photoUrl, notes?}
         checklistPhotos,
       } = req.body;
@@ -85,6 +90,15 @@ export const checklistController = {
       if (canvasPhotoUrl)
         photos.push({ category: "LONA", photoUrl: canvasPhotoUrl });
 
+      const odometerParsed =
+        odometer !== undefined && odometer !== null && String(odometer).trim() !== ""
+          ? parseInt(String(odometer), 10)
+          : undefined;
+      const odometerKm =
+        odometerParsed !== undefined && !Number.isNaN(odometerParsed)
+          ? odometerParsed
+          : truck.totalKm ?? undefined;
+
       const checklist = await prisma.dailyChecklist.create({
         data: {
           truckId,
@@ -97,6 +111,7 @@ export const checklistController = {
           location,
           latitude: latitude ? parseFloat(latitude) : undefined,
           longitude: longitude ? parseFloat(longitude) : undefined,
+          odometer: odometerKm,
           reviewStatus: "PENDENTE",
           photos:
             photos.length > 0
@@ -164,6 +179,7 @@ export const checklistController = {
         driverId,
         startDate,
         endDate,
+        search,
         page = "1",
         limit = "10",
       } = req.query;
@@ -198,6 +214,25 @@ export const checklistController = {
         if (endDate) where.date.lte = new Date(endDate as string);
       }
 
+      const searchRaw = typeof search === "string" ? search.trim() : "";
+      if (searchRaw) {
+        const normPlate = normalizePlate(searchRaw);
+        const searchOr: Prisma.DailyChecklistWhereInput[] = [
+          { driver: { name: { contains: searchRaw, mode: "insensitive" } } },
+          { truck: { plate: { contains: searchRaw, mode: "insensitive" } } },
+        ];
+        if (normPlate.length >= 5) {
+          searchOr.push({ truck: { trailerPlates: { has: normPlate } } });
+        }
+        const existingAnd = where.AND;
+        const andArr = Array.isArray(existingAnd)
+          ? [...existingAnd]
+          : existingAnd != null
+            ? [existingAnd]
+            : [];
+        where.AND = [...andArr, { OR: searchOr }];
+      }
+
       const [total, checklists] = await Promise.all([
         prisma.dailyChecklist.count({ where }),
         prisma.dailyChecklist.findMany({
@@ -211,6 +246,7 @@ export const checklistController = {
                 trailerPlates: true,
                 vehicleType: true,
                 spareCount: true,
+                totalKm: true,
               },
             },
             driver: {

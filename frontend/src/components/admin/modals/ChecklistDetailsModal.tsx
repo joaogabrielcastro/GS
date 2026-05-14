@@ -154,11 +154,11 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
                     : "Não informado"}
                 </span>
               </p>
-              {checklist.odometer != null && (
+              {(checklist.odometer != null || checklist.truck?.totalKm != null) && (
                 <p className="flex justify-between gap-3">
                   <span className="text-gray-500">Hodômetro:</span>
                   <span className="font-medium text-right">
-                    {checklist.odometer.toLocaleString()} km
+                    {(checklist.odometer ?? checklist.truck?.totalKm ?? 0).toLocaleString()} km
                   </span>
                 </p>
               )}

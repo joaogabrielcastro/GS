@@ -6,13 +6,18 @@ import type { Occurrence } from "@/types";
 export function useAdminOccurrences(active: boolean) {
   const [items, setItems] = useState<Occurrence[]>([]);
   const [page, setPage] = useState(1);
+  const [search, setSearchState] = useState("");
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedOccurrence, setSelectedOccurrence] = useState<Occurrence | null>(null);
   const [isOccurrenceModalOpen, setIsOccurrenceModalOpen] = useState(false);
 
   const load = async () => {
-    const result = await occurrenceService.list({ page, limit: 10 });
+    const result = await occurrenceService.list({
+      page,
+      limit: 10,
+      search: search.trim() || undefined,
+    });
     setItems(result.data);
     setTotal(result.total);
     setTotalPages(result.totalPages);
@@ -38,11 +43,18 @@ export function useAdminOccurrences(active: boolean) {
     if (!active) return;
     load().catch(() => toast.error("Erro ao carregar ocorrências"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, page]);
+  }, [active, page, search]);
+
+  const setSearch = (value: string) => {
+    setSearchState(value);
+    setPage(1);
+  };
 
   return {
     items,
     page,
+    search,
+    setSearch,
     total,
     totalPages,
     setPage,

@@ -17,7 +17,7 @@ import { useAdminOccurrences } from "@/hooks/admin/useAdminOccurrences";
 import { useAdminChecklists } from "@/hooks/admin/useAdminChecklists";
 import { useAdminTrucks } from "@/hooks/admin/useAdminTrucks";
 import { useAdminTires } from "@/hooks/admin/useAdminTires";
-import { AlertCircle, CheckCircle, Plus, Truck, Users } from "lucide-react";
+import { AlertCircle, CheckCircle, Plus, Search, Truck, Users } from "lucide-react";
 import { toast } from "react-hot-toast";
 import {
   CHECKLIST_REVIEW_LABELS,
@@ -99,6 +99,7 @@ const AdminDashboardContainer: React.FC = () => {
     return t === "visao-geral" || t === "motoristas";
   });
   const [drivers, setDrivers] = useState<User[]>([]);
+  const [driverSearch, setDriverSearch] = useState("");
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isDriverModalOpen, setIsDriverModalOpen] = useState(false);
@@ -127,28 +128,50 @@ const AdminDashboardContainer: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (activeTab !== "visao-geral" && activeTab !== "motoristas") {
-        setLoading(false);
-        return;
-      }
+    if (activeTab !== "visao-geral") return;
+    let cancelled = false;
+    (async () => {
       try {
         setLoading(true);
-        if (activeTab === "visao-geral") {
-          const data = await dashboardService.getAdminStats();
-          setStats(data);
-        } else if (activeTab === "motoristas") {
-          const data = await authService.listUsers("MOTORISTA");
-          setDrivers(data);
-        }
+        const data = await dashboardService.getAdminStats();
+        if (!cancelled) setStats(data);
       } catch {
-        toast.error("Erro ao carregar dados.");
+        if (!cancelled) toast.error("Erro ao carregar dados.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
+    })();
+    return () => {
+      cancelled = true;
     };
+  }, [activeTab]);
 
-    void fetchData();
+  useEffect(() => {
+    if (activeTab !== "motoristas") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await authService.listUsers(
+          "MOTORISTA",
+          driverSearch.trim() || undefined,
+        );
+        if (!cancelled) setDrivers(data);
+      } catch {
+        if (!cancelled) toast.error("Erro ao carregar dados.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, driverSearch]);
+
+  useEffect(() => {
+    if (activeTab !== "visao-geral" && activeTab !== "motoristas") {
+      setLoading(false);
+    }
   }, [activeTab]);
 
   const handleSaveDriver = async (e: React.FormEvent) => {
@@ -191,7 +214,10 @@ const AdminDashboardContainer: React.FC = () => {
       }
       setIsDriverModalOpen(false);
       setEditingDriver(null);
-      const updated = await authService.listUsers("MOTORISTA");
+      const updated = await authService.listUsers(
+        "MOTORISTA",
+        driverSearch.trim() || undefined,
+      );
       setDrivers(updated);
     } catch (error) {
       toast.error(
@@ -210,7 +236,10 @@ const AdminDashboardContainer: React.FC = () => {
     try {
       await authService.deleteUser(driver.id);
       toast.success("Motorista desativado!");
-      const updated = await authService.listUsers("MOTORISTA");
+      const updated = await authService.listUsers(
+        "MOTORISTA",
+        driverSearch.trim() || undefined,
+      );
       setDrivers(updated);
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Erro ao desativar motorista"));
@@ -388,17 +417,31 @@ const AdminDashboardContainer: React.FC = () => {
 
             {activeTab === "motoristas" && (
               <div className="animate-fade-in">
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6">
                   <h2 className="text-xl font-bold text-gray-800">Equipe de Motoristas</h2>
-                  <button
-                    onClick={() => {
-                      setEditingDriver(null);
-                      setIsDriverModalOpen(true);
-                    }}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors"
-                  >
-                    <Plus className="w-5 h-5" /> Novo Motorista
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-3 sm:items-center w-full sm:w-auto sm:min-w-0 sm:justify-end">
+                    <label className="relative flex-1 sm:max-w-md min-w-0">
+                      <span className="sr-only">Buscar motorista</span>
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <input
+                        type="search"
+                        value={driverSearch}
+                        onChange={(e) => setDriverSearch(e.target.value)}
+                        placeholder="Nome, e-mail, telefone ou CPF…"
+                        autoComplete="off"
+                        className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
+                      />
+                    </label>
+                    <button
+                      onClick={() => {
+                        setEditingDriver(null);
+                        setIsDriverModalOpen(true);
+                      }}
+                      className="shrink-0 bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    >
+                      <Plus className="w-5 h-5" /> Novo Motorista
+                    </button>
+                  </div>
                 </div>
 
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -465,7 +508,9 @@ const AdminDashboardContainer: React.FC = () => {
                       {drivers.length === 0 && (
                         <tr>
                           <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                            Nenhum motorista encontrado.
+                            {driverSearch.trim()
+                              ? "Nenhum motorista encontrado para esta busca."
+                              : "Nenhum motorista encontrado."}
                           </td>
                         </tr>
                       )}
@@ -481,6 +526,8 @@ const AdminDashboardContainer: React.FC = () => {
                 page={occurrences.page}
                 total={occurrences.total}
                 totalPages={occurrences.totalPages}
+                search={occurrences.search}
+                onSearchChange={occurrences.setSearch}
                 onPageChange={occurrences.setPage}
                 onOpenDetails={(occ) => {
                   occurrences.setSelectedOccurrence(occ);
@@ -495,6 +542,8 @@ const AdminDashboardContainer: React.FC = () => {
                 page={checklists.page}
                 total={checklists.total}
                 totalPages={checklists.totalPages}
+                search={checklists.search}
+                onSearchChange={checklists.setSearch}
                 onPageChange={checklists.setPage}
                 onOpenDetails={(check) => {
                   checklists.setSelectedChecklist(check);

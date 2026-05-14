@@ -138,6 +138,7 @@ export const occurrenceController = {
         status,
         startDate,
         endDate,
+        search,
         page = "1",
         limit = "10",
       } = req.query;
@@ -174,6 +175,22 @@ export const occurrenceController = {
         where.occurredAt = {};
         if (startDate) where.occurredAt.gte = new Date(startDate as string);
         if (endDate) where.occurredAt.lte = new Date(endDate as string);
+      }
+
+      const searchRaw = typeof search === "string" ? search.trim() : "";
+      if (searchRaw) {
+        const searchOr: Prisma.OccurrenceWhereInput[] = [
+          { description: { contains: searchRaw, mode: "insensitive" } },
+          { truck: { plate: { contains: searchRaw, mode: "insensitive" } } },
+          { driver: { name: { contains: searchRaw, mode: "insensitive" } } },
+        ];
+        const existingAnd = where.AND;
+        const andArr = Array.isArray(existingAnd)
+          ? [...existingAnd]
+          : existingAnd != null
+            ? [existingAnd]
+            : [];
+        where.AND = [...andArr, { OR: searchOr }];
       }
 
       const [total, occurrences] = await Promise.all([

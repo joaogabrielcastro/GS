@@ -115,8 +115,10 @@ api.interceptors.response.use(
 
 // Adicionando serviço de caminhões se não existir, ou extendendo api
 export const authService = {
-  listUsers: async (role?: string) => {
-    const params = role ? { role } : {};
+  listUsers: async (role?: string, search?: string) => {
+    const params: Record<string, string> = {};
+    if (role) params.role = role;
+    if (search?.trim()) params.search = search.trim();
     const response = await api.get("/auth/users", { params });
     return response.data;
   },
@@ -215,10 +217,11 @@ export const checklistService = {
     const response = await api.post("/checklists", data);
     return response.data;
   },
-  list: async (opts?: { page?: number; limit?: number }) => {
+  list: async (opts?: { page?: number; limit?: number; search?: string }) => {
     const params: Record<string, string> = {};
     if (opts?.page) params.page = String(opts.page);
     if (opts?.limit) params.limit = String(opts.limit);
+    if (opts?.search?.trim()) params.search = opts.search.trim();
     const response = await api.get("/checklists", { params });
     return response.data as PaginatedResponse<DailyChecklist>;
   },
@@ -243,10 +246,11 @@ export const occurrenceService = {
     const response = await api.post("/occurrences", data);
     return response.data;
   },
-  list: async (opts?: { page?: number; limit?: number }) => {
+  list: async (opts?: { page?: number; limit?: number; search?: string }) => {
     const params: Record<string, string> = {};
     if (opts?.page) params.page = String(opts.page);
     if (opts?.limit) params.limit = String(opts.limit);
+    if (opts?.search?.trim()) params.search = opts.search.trim();
     const response = await api.get("/occurrences", { params });
     return response.data as PaginatedResponse<Occurrence>;
   },

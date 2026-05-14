@@ -35,6 +35,7 @@ export const createChecklistBodySchema = z.object({
   location: z.string().max(255).optional(),
   latitude: z.union([z.coerce.number(), z.string()]).optional(),
   longitude: z.union([z.coerce.number(), z.string()]).optional(),
+  odometer: z.coerce.number().int().nonnegative().optional(),
   checklistPhotos: z.union([z.string(), z.array(checklistPhotoSchema)]).optional(),
 });
 
@@ -45,4 +46,5 @@ export const listChecklistsQuerySchema = z.object({
   endDate: dateStringSchema.optional(),
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
+  search: z.string().max(200).optional(),
 });

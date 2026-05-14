@@ -214,6 +214,8 @@ model DailyChecklist {
   location          String?
   latitude          Float?
   longitude         Float?
+  /// Hodômetro informado no envio (km); legados podem ficar nulos.
+  odometer          Int?
   reviewStatus      ChecklistReviewStatus @default(PENDENTE)
   createdAt         DateTime @default(now())
 

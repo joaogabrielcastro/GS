@@ -6,13 +6,18 @@ import type { DailyChecklist } from "@/types";
 export function useAdminChecklists(active: boolean) {
   const [items, setItems] = useState<DailyChecklist[]>([]);
   const [page, setPage] = useState(1);
+  const [search, setSearchState] = useState("");
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedChecklist, setSelectedChecklist] = useState<DailyChecklist | null>(null);
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
 
   const load = async () => {
-    const result = await checklistService.list({ page, limit: 10 });
+    const result = await checklistService.list({
+      page,
+      limit: 10,
+      search: search.trim() || undefined,
+    });
     setItems(result.data);
     setTotal(result.total);
     setTotalPages(result.totalPages);
@@ -22,11 +27,18 @@ export function useAdminChecklists(active: boolean) {
     if (!active) return;
     load().catch(() => toast.error("Erro ao carregar checklists"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, page]);
+  }, [active, page, search]);
+
+  const setSearch = (value: string) => {
+    setSearchState(value);
+    setPage(1);
+  };
 
   return {
     items,
     page,
+    search,
+    setSearch,
     total,
     totalPages,
     setPage,

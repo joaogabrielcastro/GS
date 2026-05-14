@@ -1,5 +1,5 @@
 import React from "react";
-import { Eye } from "lucide-react";
+import { Eye, Search } from "lucide-react";
 import Pagination from "@/components/Pagination";
 import {
   CHECKLIST_REVIEW_LABELS,
@@ -12,6 +12,8 @@ interface ChecklistsTabProps {
   page: number;
   total: number;
   totalPages: number;
+  search: string;
+  onSearchChange: (value: string) => void;
   onPageChange: (page: number) => void;
   onOpenDetails: (checklist: DailyChecklist) => void;
 }
@@ -21,13 +23,39 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
   page,
   total,
   totalPages,
+  search,
+  onSearchChange,
   onPageChange,
   onOpenDetails,
 }) => {
+  const searchTrimmed = search.trim();
+  const emptyMessage =
+    searchTrimmed.length > 0
+      ? "Nenhum checklist encontrado para esta busca."
+      : "Nenhum checklist encontrado.";
+
+  const formatKm = (check: DailyChecklist) => {
+    const km = check.odometer ?? check.truck?.totalKm;
+    if (km == null || Number.isNaN(km)) return "—";
+    return `${km.toLocaleString()} km`;
+  };
+
   return (
     <div className="animate-fade-in">
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-3">
         <h2 className="text-lg sm:text-xl font-bold text-gray-800">Checklists Realizados</h2>
+        <label className="relative w-full sm:max-w-md min-w-0">
+          <span className="sr-only">Buscar checklist</span>
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Placa, carreta, motorista…"
+            autoComplete="off"
+            className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
+          />
+        </label>
       </div>
       <p className="text-xs text-gray-500 mb-4 sm:hidden">
         Deslize a tabela para o lado para ver todas as colunas.
@@ -94,9 +122,7 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
                         {CHECKLIST_REVIEW_LABELS[rs]}
                       </span>
                     </td>
-                    <td className="px-4 sm:px-6 py-4 text-sm text-gray-600">
-                      {check.odometer?.toLocaleString()} km
-                    </td>
+                    <td className="px-4 sm:px-6 py-4 text-sm text-gray-600">{formatKm(check)}</td>
                     <td className="px-4 sm:px-6 py-4 text-sm">
                       <button
                         onClick={() => onOpenDetails(check)}
@@ -111,7 +137,7 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
               {checklists.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                    Nenhum checklist encontrado.
+                    {emptyMessage}
                   </td>
                 </tr>
               )}

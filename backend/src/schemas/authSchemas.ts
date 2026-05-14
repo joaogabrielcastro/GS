@@ -50,4 +50,5 @@ export const updateProfileBodySchema = z.object({
 
 export const listUsersQuerySchema = z.object({
   role: z.enum(["MOTORISTA", "ADMINISTRADOR", "FINANCEIRO"]).optional(),
+  search: z.string().max(200).optional(),
 });
