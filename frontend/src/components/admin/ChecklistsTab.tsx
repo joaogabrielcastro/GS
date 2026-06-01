@@ -70,18 +70,18 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
   return (
     <div className="animate-fade-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-3">
-        <h2 className="text-lg sm:text-xl font-bold text-gray-800">Checklists Realizados</h2>
+        <h2 className="section-title">Checklists realizados</h2>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:min-w-0">
-          <label className="relative flex-1 sm:max-w-md min-w-0">
+          <label className="search-field sm:max-w-md">
             <span className="sr-only">Buscar checklist</span>
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gs-gray-400 pointer-events-none" />
             <input
               type="search"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Placa, carreta, motorista…"
               autoComplete="off"
-              className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
+              className="search-input"
             />
           </label>
           <label className="sr-only" htmlFor="export-start-date">
@@ -92,7 +92,7 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
             type="date"
             value={exportStartDate}
             onChange={(e) => setExportStartDate(e.target.value)}
-            className="shrink-0 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900"
+            className="shrink-0 input-field py-2"
             title="Data inicial (export)"
           />
           <label className="sr-only" htmlFor="export-end-date">
@@ -103,14 +103,14 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
             type="date"
             value={exportEndDate}
             onChange={(e) => setExportEndDate(e.target.value)}
-            className="shrink-0 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900"
+            className="shrink-0 input-field py-2"
             title="Data final (export)"
           />
           <button
             type="button"
             onClick={() => void handleExport()}
             disabled={exporting}
-            className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="shrink-0 btn-outline py-2 text-sm disabled:opacity-50"
           >
             <Download className="w-4 h-4" />
             {exporting ? "Exportando…" : "Exportar CSV"}
@@ -121,7 +121,7 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
         Deslize a tabela para o lado para ver todas as colunas.
       </p>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="table-shell">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left">
             <thead className="bg-gray-50 border-b border-gray-200">
@@ -186,7 +186,7 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
                     <td className="px-4 sm:px-6 py-4 text-sm">
                       <button
                         onClick={() => onOpenDetails(check)}
-                        className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 whitespace-nowrap"
+                        className="link-action whitespace-nowrap"
                       >
                         <Eye className="w-4 h-4" /> Ver detalhes
                       </button>

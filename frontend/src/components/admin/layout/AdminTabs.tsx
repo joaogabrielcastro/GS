@@ -12,15 +12,15 @@ const tabs = [
   { id: "motoristas", label: "Motoristas", icon: Users },
   { id: "checklists", label: "Checklists", icon: CheckCircle },
   { id: "ocorrencias", label: "Ocorrências", icon: AlertCircle },
-  { id: "pneus", label: "Gestão de Pneus", icon: Disc },
+  { id: "pneus", label: "Pneus", icon: Disc },
 ];
 
 const AdminTabs: React.FC<AdminTabsProps> = ({ activeTab, onChange }) => {
   return (
-    <div className="bg-white border-b border-gray-200/80 mb-6 shadow-sm">
+    <div className="bg-white border-b border-gs-gray-100 shadow-sm sticky top-[4.25rem] sm:top-[4.75rem] z-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <nav
-          className="flex gap-1 sm:gap-2 overflow-x-auto pb-0 pt-1 [-webkit-overflow-scrolling:touch] scroll-smooth [scrollbar-width:thin]"
+          className="flex gap-1 overflow-x-auto py-1 [-webkit-overflow-scrolling:touch] scroll-smooth scrollbar-thin"
           role="tablist"
           aria-label="Seções do painel administrativo"
         >
@@ -33,20 +33,20 @@ const AdminTabs: React.FC<AdminTabsProps> = ({ activeTab, onChange }) => {
                 role="tab"
                 aria-selected={selected}
                 onClick={() => onChange(tab.id)}
-                className={`flex shrink-0 items-center gap-2 rounded-t-lg py-3.5 px-3 sm:px-4 border-b-2 font-medium text-sm whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2 ${
+                className={`flex shrink-0 items-center gap-2 rounded-xl py-3 px-3 sm:px-4 my-1 font-medium text-sm whitespace-nowrap transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-gs-orange-500 focus-visible:ring-offset-2 ${
                   selected
-                    ? "border-primary-600 text-primary-700 bg-primary-50/60"
-                    : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50/80 hover:border-gray-200"
+                    ? "bg-gs-orange-500 text-white shadow-sm"
+                    : "text-gs-gray-600 hover:text-gs-black hover:bg-gs-gray-100"
                 }`}
               >
-                <tab.icon className={`w-5 h-5 shrink-0 ${selected ? "text-primary-600" : ""}`} />
+                <tab.icon className="w-4 h-4 shrink-0" />
                 {tab.label}
               </button>
             );
           })}
         </nav>
-        <p className="text-xs text-gray-500 pb-2 sm:hidden pt-1">
-          Deslize as abas para o lado para acessar todas as opções.
+        <p className="text-xs text-gs-gray-500 pb-2 pt-0.5 sm:hidden">
+          Deslize para ver todas as seções.
         </p>
       </div>
     </div>

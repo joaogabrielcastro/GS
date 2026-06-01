@@ -58,7 +58,7 @@ const TrucksTab: React.FC<TrucksTabProps> = ({
           </label>
           <button
             onClick={onNewTruck}
-            className="shrink-0 bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors whitespace-nowrap"
+            className="shrink-0 btn-primary whitespace-nowrap"
           >
             <Plus className="w-5 h-5" /> Novo Caminhão
           </button>
@@ -131,7 +131,7 @@ const TrucksTab: React.FC<TrucksTabProps> = ({
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => onEditTruck(truck)}
-                        className="text-blue-600 hover:text-blue-800 font-medium"
+                        className="link-action"
                       >
                         Editar
                       </button>

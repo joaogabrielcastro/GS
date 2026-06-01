@@ -28,65 +28,61 @@ const DriversTab: React.FC<DriversTabProps> = ({
   return (
     <div className="animate-fade-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6">
-        <h2 className="text-xl font-bold text-gray-800">Equipe de Motoristas</h2>
+        <h2 className="section-title">Equipe de motoristas</h2>
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center w-full sm:w-auto sm:min-w-0 sm:justify-end">
-          <label className="relative flex-1 sm:max-w-md min-w-0">
+          <label className="search-field sm:max-w-md">
             <span className="sr-only">Buscar motorista</span>
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gs-gray-400 pointer-events-none" />
             <input
               type="search"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Nome, e-mail, telefone ou CPF…"
               autoComplete="off"
-              className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
+              className="search-input"
             />
           </label>
-          <button
-            type="button"
-            onClick={onNewDriver}
-            className="shrink-0 bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors whitespace-nowrap"
-          >
-            <Plus className="w-5 h-5" /> Novo Motorista
+          <button type="button" onClick={onNewDriver} className="shrink-0 btn-primary whitespace-nowrap">
+            <Plus className="w-5 h-5" /> Novo motorista
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative">
+      <div className="table-shell relative">
         {loading && (
           <p className="absolute top-2 right-3 text-xs text-gray-400 z-10" aria-live="polite">
             Buscando…
           </p>
         )}
         <table className={`w-full text-left ${loading ? "opacity-60" : ""}`}>
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="table-head-row">
             <tr>
-              <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="table-th">
                 Nome
               </th>
-              <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="table-th">
                 Email
               </th>
-              <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="table-th">
                 Telefone
               </th>
-              <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="table-th">
                 Status
               </th>
-              <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="table-th">
                 Cadastro
               </th>
-              <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="table-th">
                 Ações
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {drivers.map((driver) => (
-              <tr key={driver.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4">
+              <tr key={driver.id} className="table-row-hover">
+                <td className="table-td">
                   <div className="flex items-center">
-                    <div className="h-10 w-10 flex-shrink-0 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
+                    <div className="h-10 w-10 shrink-0 bg-gs-orange-100 rounded-full flex items-center justify-center text-gs-orange-700 font-bold">
                       {driver.name.charAt(0)}
                     </div>
                     <div className="ml-4">
@@ -95,9 +91,9 @@ const DriversTab: React.FC<DriversTabProps> = ({
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-600">{driver.email}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{driver.phone || "—"}</td>
-                <td className="px-6 py-4">
+                <td className="table-td">{driver.email}</td>
+                <td className="table-td">{driver.phone || "—"}</td>
+                <td className="table-td">
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       driver.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
@@ -106,16 +102,12 @@ const DriversTab: React.FC<DriversTabProps> = ({
                     {driver.active ? "Ativo" : "Inativo"}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-500">
+                <td className="table-td text-gs-gray-500">
                   {new Date(driver.createdAt).toLocaleDateString()}
                 </td>
-                <td className="px-6 py-4 text-sm">
+                <td className="table-td">
                   <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => onEditDriver(driver)}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
-                    >
+                    <button type="button" onClick={() => onEditDriver(driver)} className="link-action">
                       Editar
                     </button>
                     <button

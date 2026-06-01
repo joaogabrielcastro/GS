@@ -11,6 +11,7 @@ import DashboardAdmin from "@/pages/DashboardAdmin";
 import DashboardFinanceiro from "@/pages/DashboardFinanceiro";
 import ChecklistPage from "@/pages/ChecklistPage";
 import ReportIssuePage from "@/pages/ReportIssuePage";
+import LoadingScreen from "@/components/layout/LoadingScreen";
 
 const ProtectedRoute: React.FC<{
   children: React.ReactNode;
@@ -19,14 +20,7 @@ const ProtectedRoute: React.FC<{
   const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gs-orange-500 to-gs-orange-700">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
-          <p className="mt-4 text-white font-medium">Carregando...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!user) {
@@ -44,14 +38,7 @@ const RoleBasedRedirect: React.FC = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gs-orange-500 to-gs-orange-700">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
-          <p className="mt-4 text-white font-medium">Carregando...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!user) {
@@ -130,22 +117,25 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Toaster
-          position="top-right"
+          position="top-center"
+          containerClassName="!top-4"
           toastOptions={{
             duration: 4000,
+            className: "!rounded-xl !shadow-elevated !text-sm !font-medium",
             style: {
-              background: "#363636",
+              background: "#1F1F1F",
               color: "#fff",
+              padding: "12px 16px",
             },
             success: {
               duration: 3000,
               iconTheme: {
-                primary: "#4ade80",
+                primary: "#FF6B35",
                 secondary: "#fff",
               },
             },
             error: {
-              duration: 4000,
+              duration: 4500,
               iconTheme: {
                 primary: "#ef4444",
                 secondary: "#fff",

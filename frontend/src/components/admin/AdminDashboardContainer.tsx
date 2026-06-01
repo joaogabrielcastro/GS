@@ -20,6 +20,7 @@ import { useAdminChecklists } from "@/hooks/admin/useAdminChecklists";
 import { useAdminTrucks } from "@/hooks/admin/useAdminTrucks";
 import { useAdminTires } from "@/hooks/admin/useAdminTires";
 import { AlertCircle, CheckCircle, ClipboardList, Truck, Users } from "lucide-react";
+import { Spinner } from "@/components/ui/Spinner";
 import { toast } from "react-hot-toast";
 import {
   CHECKLIST_REVIEW_LABELS,
@@ -243,7 +244,7 @@ const AdminDashboardContainer: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="page-shell">
       <AdminHeader
         userName={user?.name}
         notifications={notifications}
@@ -257,22 +258,16 @@ const AdminDashboardContainer: React.FC = () => {
       <AdminTabs activeTab={activeTab} onChange={setActiveTab} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <header className="mb-6 pt-1">
-          <h2 className="text-xl font-bold tracking-tight text-gray-900">{tabMeta.title}</h2>
+        <header className="mb-6 pt-1 animate-fade-in">
+          <h2 className="section-title">{tabMeta.title}</h2>
           {tabMeta.description ? (
-            <p className="text-sm text-gray-500 mt-1 max-w-3xl leading-relaxed">{tabMeta.description}</p>
+            <p className="section-subtitle">{tabMeta.description}</p>
           ) : null}
         </header>
 
         {loading ? (
-          <div
-            className="flex flex-col justify-center items-center min-h-[14rem] gap-3 rounded-xl border border-dashed border-gray-200 bg-white/80"
-            role="status"
-            aria-live="polite"
-            aria-busy="true"
-          >
-            <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-200 border-t-primary-600" />
-            <p className="text-sm text-gray-500">Carregando…</p>
+          <div className="card min-h-[14rem] flex items-center justify-center">
+            <Spinner label="Carregando…" />
           </div>
         ) : (
           <>
@@ -292,31 +287,35 @@ const AdminDashboardContainer: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                  <div className="bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm">
-                    <p className="text-xs font-medium text-gray-500 uppercase">Checklists hoje</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                  <div className="card px-4 py-3">
+                    <p className="text-xs font-semibold text-gs-gray-500 uppercase tracking-wide">
+                      Checklists hoje
+                    </p>
+                    <p className="text-2xl font-bold text-gs-black mt-1">
                       {stats.compliance?.checklistsToday ?? 0}
                     </p>
                   </div>
-                  <div className="bg-white rounded-xl border border-amber-100 px-4 py-3 shadow-sm">
-                    <p className="text-xs font-medium text-amber-800 uppercase">Aguardando revisão</p>
+                  <div className="card px-4 py-3 border-amber-200/80 bg-amber-50/50">
+                    <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide">
+                      Aguardando revisão
+                    </p>
                     <p className="text-2xl font-bold text-amber-900 mt-1">
                       {stats.compliance?.pendingReview ?? 0}
                     </p>
                   </div>
-                  <div className="bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
-                    <p className="text-sm text-gray-600">
-                      Frota com checklist registrado hoje:{" "}
-                      <span className="font-semibold text-gray-900">
+                  <div className="card px-4 py-3 flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <p className="text-sm text-gs-gray-600">
+                      Frota com checklist hoje:{" "}
+                      <span className="font-semibold text-gs-black">
                         {stats.compliance?.trucksWithChecklistToday ?? 0}
                       </span>
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="card-section">
                     <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                       <AlertCircle className="w-5 h-5 text-red-500" />
                       Últimas Ocorrências
@@ -343,9 +342,9 @@ const AdminDashboardContainer: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-green-500" />
+                  <div className="card-section">
+                    <h3 className="text-lg font-bold text-gs-black mb-4 flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-emerald-600" />
                       Checklists Recentes
                     </h3>
                     <div className="space-y-4">
@@ -498,18 +497,23 @@ const AdminDashboardContainer: React.FC = () => {
       />
 
       {isDriverModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md animate-fade-in">
-            <h2 className="text-xl font-bold mb-4">
-              {editingDriver ? "Editar Motorista" : "Novo Motorista"}
+        <div className="modal-overlay z-50">
+          <div className="modal-panel-sm">
+            <h2 className="text-xl font-bold text-gs-black mb-1">
+              {editingDriver ? "Editar motorista" : "Novo motorista"}
             </h2>
+            <p className="text-sm text-gs-gray-600 mb-5">
+              {editingDriver
+                ? "Atualize os dados do motorista. Deixe a senha em branco para não alterá-la."
+                : "Preencha os dados para cadastrar um novo motorista."}
+            </p>
             <form onSubmit={handleSaveDriver}>
               <div className="space-y-4">
                 <input
                   name="name"
                   placeholder="Nome Completo"
                   defaultValue={editingDriver?.name}
-                  className="w-full p-2 border rounded"
+                  className="input-field"
                   required
                 />
                 <input
@@ -517,7 +521,7 @@ const AdminDashboardContainer: React.FC = () => {
                   type="email"
                   placeholder="Email"
                   defaultValue={editingDriver?.email}
-                  className="w-full p-2 border rounded"
+                  className="input-field"
                   required
                 />
                 <input
@@ -529,20 +533,20 @@ const AdminDashboardContainer: React.FC = () => {
                       : "Senha Provisória (mínimo 8 caracteres)"
                   }
                   minLength={8}
-                  className="w-full p-2 border rounded"
+                  className="input-field"
                   required={!editingDriver}
                 />
                 <input
                   name="cpf"
                   placeholder="CPF"
                   defaultValue={editingDriver?.cpf || ""}
-                  className="w-full p-2 border rounded"
+                  className="input-field"
                 />
                 <input
                   name="phone"
                   placeholder="Telefone"
                   defaultValue={editingDriver?.phone || ""}
-                  className="w-full p-2 border rounded"
+                  className="input-field"
                 />
               </div>
               <div className="mt-6 flex justify-end gap-2">
@@ -552,11 +556,11 @@ const AdminDashboardContainer: React.FC = () => {
                     setIsDriverModalOpen(false);
                     setEditingDriver(null);
                   }}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                  className="btn-ghost"
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                <button type="submit" className="btn-primary">
                   Salvar
                 </button>
               </div>
@@ -631,15 +635,19 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, sub, icon: Icon, color 
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+    <div className="kpi-card group">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-500">{title}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{value !== undefined ? value : "-"}</p>
-          <p className="text-xs text-gray-400 mt-1 uppercase">{sub}</p>
+          <p className="text-sm font-medium text-gs-gray-600">{title}</p>
+          <p className="text-3xl font-bold text-gs-black mt-2 tracking-tight">
+            {value !== undefined ? value : "—"}
+          </p>
+          <p className="text-xs text-gs-gray-500 mt-1">{sub}</p>
         </div>
-        <div className={`p-3 rounded-xl ${colorClasses[color]}`}>
-          <Icon className="w-8 h-8" />
+        <div
+          className={`p-3 rounded-2xl transition-transform group-hover:scale-105 ${colorClasses[color]}`}
+        >
+          <Icon className="w-7 h-7" />
         </div>
       </div>
     </div>

@@ -61,7 +61,7 @@ const TiresTab: React.FC<TiresTabProps> = ({
         <h2 className="text-xl font-bold text-gray-800">Gestão de Pneus</h2>
         <button
           onClick={onNewTire}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          className="btn-primary"
         >
           <Plus className="w-5 h-5" />
           Novo Pneu
@@ -148,7 +148,7 @@ const TiresTab: React.FC<TiresTabProps> = ({
                 <td className="px-6 py-4 text-sm">
                   <button
                     onClick={() => onManageTire(tire)}
-                    className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                    className="link-action"
                   >
                     <Settings className="w-4 h-4" /> Gerenciar
                   </button>

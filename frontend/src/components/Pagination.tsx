@@ -23,7 +23,6 @@ export default function Pagination({
   const from = (page - 1) * limit + 1;
   const to = Math.min(page * limit, total);
 
-  // Build page number list with ellipsis
   const pages: (number | "...")[] = [];
   if (totalPages <= 7) {
     for (let i = 1; i <= totalPages; i++) pages.push(i);
@@ -43,19 +42,20 @@ export default function Pagination({
 
   return (
     <div
-      className={`flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-white ${className}`}
+      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-4 border-t border-gs-gray-100 bg-gs-gray-50/50 ${className}`}
     >
-      <p className="text-sm text-gray-500">
-        Exibindo <span className="font-medium">{from}</span>–
-        <span className="font-medium">{to}</span> de{" "}
-        <span className="font-medium">{total}</span> registros
+      <p className="text-sm text-gs-gray-600">
+        Exibindo <span className="font-semibold text-gs-black">{from}</span>–
+        <span className="font-semibold text-gs-black">{to}</span> de{" "}
+        <span className="font-semibold text-gs-black">{total}</span>
       </p>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 justify-center sm:justify-end">
         <button
+          type="button"
           onClick={() => onPageChange(page - 1)}
           disabled={page === 1}
-          className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-2 rounded-xl text-gs-gray-600 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           aria-label="Página anterior"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -63,17 +63,18 @@ export default function Pagination({
 
         {pages.map((p, i) =>
           p === "..." ? (
-            <span key={`el-${i}`} className="px-2 text-gray-400 select-none">
+            <span key={`el-${i}`} className="px-2 text-gs-gray-400 select-none">
               …
             </span>
           ) : (
             <button
               key={p}
+              type="button"
               onClick={() => onPageChange(p as number)}
-              className={`w-8 h-8 rounded-md text-sm font-medium transition-colors ${
+              className={`min-w-[2.25rem] h-9 rounded-xl text-sm font-semibold transition-all ${
                 p === page
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-gs-orange-500 text-white shadow-sm"
+                  : "text-gs-gray-700 hover:bg-white"
               }`}
             >
               {p}
@@ -82,9 +83,10 @@ export default function Pagination({
         )}
 
         <button
+          type="button"
           onClick={() => onPageChange(page + 1)}
           disabled={page === totalPages}
-          className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-2 rounded-xl text-gs-gray-600 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           aria-label="Próxima página"
         >
           <ChevronRight className="w-4 h-4" />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogOut, Truck, ClipboardCheck, AlertCircle, Bell } from "lucide-react";
+import { LogOut, Truck, ClipboardCheck, AlertCircle, Bell, ChevronRight } from "lucide-react";
 import socketService from "@/services/socket";
 import toast from "react-hot-toast";
 import { dashboardService, DriverStats } from "@/services/dashboardService";
@@ -12,6 +12,9 @@ import {
   type OccurrenceType,
 } from "@/types";
 import { Link } from "react-router-dom";
+import Logo from "@/components/Logo";
+import { Spinner } from "@/components/ui/Spinner";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const DashboardMotorista: React.FC = () => {
   const { user, logout } = useAuth();
@@ -19,7 +22,6 @@ const DashboardMotorista: React.FC = () => {
   const [stats, setStats] = useState<DriverStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [availableTrucks, setAvailableTrucks] = useState<any[]>([]);
-  const [showTruckSelection, setShowTruckSelection] = useState(false);
   const [selectedTruckId, setSelectedTruckId] = useState("");
 
   const fetchStats = async () => {
@@ -50,7 +52,6 @@ const DashboardMotorista: React.FC = () => {
   useEffect(() => {
     fetchStats();
 
-    // Escutar notificações em tempo real
     socketService.on("newNotification", (payload) => {
       const data = payload as { notification: { title: string } };
       toast.success(data.notification.title);
@@ -67,265 +68,248 @@ const DashboardMotorista: React.FC = () => {
     try {
       await truckService.selectTruck(selectedTruckId);
       toast.success("Caminhão selecionado com sucesso!");
-      fetchStats(); // Recarregar dados
-      setShowTruckSelection(false);
-    } catch (error) {
+      fetchStats();
+    } catch {
       toast.error("Erro ao selecionar caminhão.");
     }
   };
 
   const handleReleaseTruck = async () => {
-    if (window.confirm("Deseja entregar o caminhão?")) {
+    if (window.confirm("Deseja entregar o caminhão e encerrar o plantão?")) {
       try {
         await truckService.releaseTruck();
         toast.success("Caminhão entregue.");
         fetchStats();
-      } catch (error) {
+      } catch {
         toast.error("Erro ao entregar caminhão.");
       }
     }
   };
 
+  const firstName = user?.name?.split(" ")[0] ?? "Motorista";
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {" "}
-      {/* pb-20 para dar espaço no mobile se tiver footer fixo, mas aqui é só espaço mesmo */}
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                Olá, {user?.name?.split(" ")[0]}! 👋
+    <div className="page-shell-driver">
+      <header className="sticky top-0 z-20 border-b border-gs-gray-100 bg-white/95 backdrop-blur-md">
+        <div className="max-w-lg mx-auto sm:max-w-3xl px-4 py-3 flex justify-between items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <Logo size="sm" className="!h-10 shrink-0 hidden sm:block" />
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold text-gs-black tracking-tight truncate">
+                Olá, {firstName}
               </h1>
-              <p className="text-xs sm:text-sm text-gray-600">Boa viagem!</p>
+              <p className="text-xs text-gs-gray-600">Área do motorista</p>
             </div>
-
-            <div className="flex items-center gap-3">
-              <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full">
-                <Bell className="w-6 h-6" />
-                {notifications.length > 0 && (
-                  <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {notifications.length}
-                  </span>
-                )}
-              </button>
-
-              <button
-                onClick={logout}
-                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title="Sair"
-              >
-                <LogOut className="w-6 h-6" />
-              </button>
-            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl text-gs-gray-600 hover:bg-gs-gray-100"
+              aria-label="Notificações"
+            >
+              <Bell className="w-5 h-5" />
+              {notifications.length > 0 && (
+                <span className="absolute top-1 right-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-gs-orange-500 text-[10px] font-bold text-white px-1">
+                  {notifications.length > 9 ? "9+" : notifications.length}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={logout}
+              className="btn-danger-ghost p-2"
+              title="Sair"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </header>
-      {/* Main Content */}
-      <main className="max-w-md mx-auto sm:max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+
+      <main className="max-w-lg mx-auto sm:max-w-3xl px-4 py-6 space-y-8">
         {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-          </div>
+          <Spinner label="Carregando seu painel…" className="min-h-[16rem]" />
         ) : (
           <>
-            {/* Status do Caminhão Atribuído */}
             {stats?.truck ? (
-              <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-lg mb-8 transform transition-transform active:scale-95">
-                <div className="flex justify-between items-start mb-4">
+              <div className="brand-hero animate-fade-in">
+                <div className="flex justify-between items-start gap-4">
                   <div>
-                    <p className="text-blue-100 text-sm font-medium">
-                      Seu Veículo Atual
+                    <p className="text-gs-orange-100 text-xs font-semibold uppercase tracking-wider">
+                      Veículo em uso
                     </p>
-                    <h2 className="text-3xl font-bold mt-1">
+                    <h2 className="text-3xl sm:text-4xl font-extrabold tracking-wide mt-1">
                       {stats.truck.plate}
                     </h2>
-                    <p className="text-blue-100 text-sm opacity-90">
+                    <p className="text-gs-orange-100/90 text-sm mt-1">
                       {stats.truck.brand} {stats.truck.model}
                     </p>
                   </div>
-                  <div className="bg-white/20 p-3 rounded-xl">
-                    <Truck className="w-8 h-8 text-white" />
+                  <div className="bg-white/15 p-3 rounded-2xl backdrop-blur-sm">
+                    <Truck className="w-8 h-8" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 mt-6">
-                  <div className="bg-white/10 rounded-lg p-3">
-                    <p className="text-xs text-blue-200 uppercase font-semibold">
-                      Viagens Mês
+                <div className="grid grid-cols-2 gap-3 mt-6">
+                  <div className="rounded-xl bg-white/10 p-3 backdrop-blur-sm">
+                    <p className="text-[10px] uppercase font-semibold text-gs-orange-200">
+                      Viagens no mês
                     </p>
-                    <p className="text-2xl font-bold">
-                      {stats.stats.tripsThisMonth}
-                    </p>
+                    <p className="text-2xl font-bold mt-0.5">{stats.stats.tripsThisMonth}</p>
                   </div>
-                  <div className="bg-white/10 rounded-lg p-3">
-                    <p className="text-xs text-blue-200 uppercase font-semibold">
+                  <div className="rounded-xl bg-white/10 p-3 backdrop-blur-sm">
+                    <p className="text-[10px] uppercase font-semibold text-gs-orange-200">
                       Status
                     </p>
-                    <p className="text-xl font-bold">ATIVO</p>
+                    <p className="text-xl font-bold mt-0.5">Ativo</p>
                   </div>
                 </div>
-
                 <button
+                  type="button"
                   onClick={handleReleaseTruck}
-                  className="mt-4 w-full bg-white/20 hover:bg-white/30 text-white py-2 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  className="mt-5 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-sm font-semibold transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
-                  Entregar Caminhão / Encerrar Plantão
+                  Entregar caminhão / encerrar plantão
                 </button>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl p-6 shadow-lg mb-8 border border-gray-100">
-                <div className="flex justify-between items-center mb-4">
+              <div className="card-section animate-fade-in">
+                <div className="flex gap-4 items-start mb-5">
+                  <div className="bg-gs-orange-100 p-3 rounded-2xl shrink-0">
+                    <Truck className="w-8 h-8 text-gs-orange-600" />
+                  </div>
                   <div>
-                    <h2 className="text-xl font-bold text-gray-800">
-                      Nenhum caminhão atribuído
-                    </h2>
-                    <p className="text-gray-500 text-sm">
-                      Selecione um veículo para iniciar.
+                    <h2 className="text-lg font-bold text-gs-black">Nenhum veículo atribuído</h2>
+                    <p className="text-sm text-gs-gray-600 mt-1">
+                      Selecione um caminhão disponível para iniciar o plantão.
                     </p>
                   </div>
-                  <div className="bg-orange-100 p-3 rounded-xl">
-                    <Truck className="w-8 h-8 text-orange-500" />
-                  </div>
                 </div>
-
-                <div className="space-y-3">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Veículos Disponíveis:
-                  </label>
-                  <select
-                    className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                    value={selectedTruckId}
-                    onChange={(e) => setSelectedTruckId(e.target.value)}
-                  >
-                    <option value="">Selecione um caminhão...</option>
-                    {availableTrucks.map((truck) => (
-                      <option key={truck.id} value={truck.id}>
-                        {truck.plate} - {truck.brand} {truck.model}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={handleSelectTruck}
-                    disabled={!selectedTruckId}
-                    className="w-full py-3 px-4 bg-blue-600 hovered:bg-blue-700 text-white font-medium rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
-                  >
-                    <ClipboardCheck className="w-5 h-5" />
-                    Confirmar e Iniciar Plantão
-                  </button>
-                </div>
+                <label className="label-field">Caminhões disponíveis</label>
+                <select
+                  className="input-field mb-4"
+                  value={selectedTruckId}
+                  onChange={(e) => setSelectedTruckId(e.target.value)}
+                >
+                  <option value="">Selecione um caminhão…</option>
+                  {availableTrucks.map((truck) => (
+                    <option key={truck.id} value={truck.id}>
+                      {truck.plate} — {truck.brand} {truck.model}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleSelectTruck}
+                  disabled={!selectedTruckId}
+                  className="w-full btn-primary py-3"
+                >
+                  <ClipboardCheck className="w-5 h-5" />
+                  Confirmar e iniciar plantão
+                </button>
               </div>
             )}
 
-            {/* Ações Rápidas - Grid Mobile-First */}
-            <h3 className="text-lg font-bold text-gray-800 mb-4 px-1">
-              Acesso Rápido
-            </h3>
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              {/* Checklist Diário */}
-              <Link to="/checklist/novo" className="block w-full">
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all active:bg-gray-50 h-[100px] flex flex-col items-center text-center justify-center">
-                  <div className="bg-green-100 p-2 rounded-full mb-2">
-                    <ClipboardCheck className="w-6 h-6 text-green-600" />
+            <section>
+              <h3 className="text-sm font-bold text-gs-gray-600 uppercase tracking-wider mb-3 px-0.5">
+                Acesso rápido
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <Link
+                  to="/checklist/novo"
+                  className="card p-4 flex flex-col items-center text-center gap-3 hover:shadow-soft active:scale-[0.98] transition-all group min-h-[7.5rem] justify-center"
+                >
+                  <div className="bg-emerald-100 p-3 rounded-2xl group-hover:bg-emerald-200/80 transition-colors">
+                    <ClipboardCheck className="w-7 h-7 text-emerald-700" />
                   </div>
-                  <h3 className="font-bold text-gray-900 text-sm">
-                    Novo Checklist
-                  </h3>
-                </div>
-              </Link>
-
-              {/* Registrar Ocorrência */}
-              <Link to="/ocorrencias/nova" className="block w-full">
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all active:bg-gray-50 h-[100px] flex flex-col items-center text-center justify-center">
-                  <div className="bg-red-100 p-2 rounded-full mb-2">
-                    <AlertCircle className="w-6 h-6 text-red-600" />
+                  <span className="font-bold text-gs-black text-sm">Novo checklist</span>
+                </Link>
+                <Link
+                  to="/ocorrencias/nova"
+                  className="card p-4 flex flex-col items-center text-center gap-3 hover:shadow-soft active:scale-[0.98] transition-all group min-h-[7.5rem] justify-center"
+                >
+                  <div className="bg-red-100 p-3 rounded-2xl group-hover:bg-red-200/80 transition-colors">
+                    <AlertCircle className="w-7 h-7 text-red-700" />
                   </div>
-                  <h3 className="font-bold text-gray-900 text-sm">
-                    Reportar Problema
-                  </h3>
-                </div>
-              </Link>
-            </div>
+                  <span className="font-bold text-gs-black text-sm">Reportar problema</span>
+                </Link>
+              </div>
+            </section>
 
-            {/* Resumo Recente */}
-            <h3 className="text-lg font-bold text-gray-800 mb-4 px-1">
-              Atividades Recentes
-            </h3>
-
-            <div className="space-y-4">
-              {/* Último Checklist */}
-              {stats?.lastChecklist ? (
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-                  <div
-                    className={`p-3 rounded-full ${
-                      stats.lastChecklist.reviewStatus === "APROVADO" || stats.lastChecklist.isApproved
-                        ? "bg-green-100"
-                        : stats.lastChecklist.reviewStatus === "REJEITADO"
-                          ? "bg-red-100"
-                          : "bg-amber-100"
-                    }`}
-                  >
-                    <ClipboardCheck
-                      className={`w-5 h-5 ${
-                        stats.lastChecklist.reviewStatus === "APROVADO" || stats.lastChecklist.isApproved
-                          ? "text-green-600"
+            <section>
+              <h3 className="text-sm font-bold text-gs-gray-600 uppercase tracking-wider mb-3 px-0.5">
+                Atividades recentes
+              </h3>
+              <div className="space-y-3">
+                {stats?.lastChecklist ? (
+                  <div className="card p-4 flex items-center gap-4">
+                    <div
+                      className={`p-3 rounded-2xl shrink-0 ${
+                        stats.lastChecklist.reviewStatus === "APROVADO" ||
+                        stats.lastChecklist.isApproved
+                          ? "bg-emerald-100"
                           : stats.lastChecklist.reviewStatus === "REJEITADO"
-                            ? "text-red-600"
-                            : "text-amber-600"
+                            ? "bg-red-100"
+                            : "bg-amber-100"
                       }`}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900 text-sm">
-                      Checklist —{" "}
-                      {stats.lastChecklist.reviewStatus === "APROVADO" || stats.lastChecklist.isApproved
-                        ? "Aprovado"
-                        : stats.lastChecklist.reviewStatus === "REJEITADO"
-                          ? "Rejeitado"
-                          : "Aguardando análise"}
-                    </h4>
-                    <p className="text-xs text-gray-500">
-                      {new Date(stats.lastChecklist.date).toLocaleDateString()}{" "}
-                      - {stats.lastChecklist.truckPlate}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-gray-500 text-sm text-center">
-                  Nenhum checklist recente.
-                </p>
-              )}
-
-              {/* Minhas Ocorrências Recentes */}
-              {stats?.recentOccurrences &&
-                stats.recentOccurrences.length > 0 &&
-                stats.recentOccurrences.map((occ) => (
-                  <div
-                    key={occ.id}
-                    className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4"
-                  >
-                    <div className="p-3 rounded-full bg-yellow-100">
-                      <AlertCircle className="w-5 h-5 text-yellow-600" />
+                    >
+                      <ClipboardCheck
+                        className={`w-5 h-5 ${
+                          stats.lastChecklist.reviewStatus === "APROVADO" ||
+                          stats.lastChecklist.isApproved
+                            ? "text-emerald-700"
+                            : stats.lastChecklist.reviewStatus === "REJEITADO"
+                              ? "text-red-700"
+                              : "text-amber-700"
+                        }`}
+                      />
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 text-sm">
-                        Ocorrência:{" "}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-gs-black text-sm">
+                        Checklist —{" "}
+                        {stats.lastChecklist.reviewStatus === "APROVADO" ||
+                        stats.lastChecklist.isApproved
+                          ? "Aprovado"
+                          : stats.lastChecklist.reviewStatus === "REJEITADO"
+                            ? "Rejeitado"
+                            : "Aguardando análise"}
+                      </h4>
+                      <p className="text-xs text-gs-gray-600 mt-0.5">
+                        {new Date(stats.lastChecklist.date).toLocaleDateString("pt-BR")} ·{" "}
+                        {stats.lastChecklist.truckPlate}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gs-gray-400 shrink-0" />
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={ClipboardCheck}
+                    title="Nenhum checklist recente"
+                    description="Envie seu primeiro checklist diário pelo acesso rápido acima."
+                  />
+                )}
+
+                {stats?.recentOccurrences?.map((occ) => (
+                  <div key={occ.id} className="card p-4 flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-amber-100 shrink-0">
+                      <AlertCircle className="w-5 h-5 text-amber-700" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-gs-black text-sm truncate">
                         {OCCURRENCE_TYPE_LABELS[occ.type as OccurrenceType] ??
                           occ.type.replace("_", " ")}
                       </h4>
-                      <p className="text-xs text-gray-500">
-                        {new Date(occ.date).toLocaleDateString()} —{" "}
-                        <span className="uppercase text-xs font-bold">
-                          {OCCURRENCE_STATUS_LABELS[
-                            occ.status as OccurrenceStatus
-                          ] ?? occ.status}
+                      <p className="text-xs text-gs-gray-600 mt-0.5">
+                        {new Date(occ.date).toLocaleDateString("pt-BR")} ·{" "}
+                        <span className="font-semibold uppercase">
+                          {OCCURRENCE_STATUS_LABELS[occ.status as OccurrenceStatus] ?? occ.status}
                         </span>
                       </p>
                     </div>
                   </div>
                 ))}
-            </div>
+              </div>
+            </section>
           </>
         )}
       </main>

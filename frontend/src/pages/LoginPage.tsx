@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Logo from "@/components/Logo";
 import { ALLOW_PUBLIC_REGISTER } from "@/config/env";
+import { Lock, Mail } from "lucide-react";
 
 const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -23,81 +24,92 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gs-orange-500 to-gs-orange-700 flex items-center justify-center px-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8"></div>
+    <div className="min-h-screen flex">
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-gs-orange-500 via-gs-orange-600 to-gs-orange-900">
+        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_30%_20%,white_0%,transparent_50%)]" />
+        <div className="relative z-10 flex flex-col justify-between p-12 text-white">
+          <div className="rounded-2xl bg-white/10 p-4 backdrop-blur-sm inline-block">
+            <Logo size="lg" />
+          </div>
+          <div className="max-w-md">
+            <h1 className="text-3xl font-bold tracking-tight leading-tight">
+              Gestão de frota inteligente
+            </h1>
+            <p className="mt-4 text-gs-orange-100 text-lg leading-relaxed">
+              Checklists, ocorrências e pneus em um só lugar — com rastreabilidade para sua operação.
+            </p>
+          </div>
+          <p className="text-sm text-gs-orange-200/90">© 2026 GS Transportes</p>
+        </div>
+      </div>
 
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <div className="flex justify-center mb-8">
+      <div className="flex flex-1 flex-col justify-center px-6 py-12 sm:px-10 lg:px-16 bg-white">
+        <div className="w-full max-w-md mx-auto">
+          <div className="lg:hidden flex justify-center mb-8">
             <Logo size="lg" />
           </div>
 
-          <h2 className="text-center text-2xl font-bold text-gray-900 mb-6">
-            Acesso ao Sistema
-          </h2>
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-gs-black tracking-tight">Bem-vindo de volta</h2>
+            <p className="mt-2 text-gs-gray-600">Entre com suas credenciais para acessar o sistema.</p>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Email
+              <label htmlFor="email" className="label-field">
+                E-mail
               </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gs-orange-500 focus:border-gs-orange-500 outline-none transition-colors"
-                placeholder="seu@email.com"
-                autoComplete="email"
-                required
-              />
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gs-gray-400 pointer-events-none" />
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input-field-lg pl-11"
+                  placeholder="seu@email.com"
+                  autoComplete="email"
+                  required
+                />
+              </div>
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="password" className="label-field">
                 Senha
               </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gs-orange-500 focus:border-gs-orange-500 outline-none transition-colors"
-                placeholder="••••••••"
-                autoComplete="current-password"
-                required
-              />
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gs-gray-400 pointer-events-none" />
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input-field-lg pl-11"
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-primary py-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full btn-primary py-3.5 text-base mt-2"
             >
-              {loading ? "Entrando..." : "Entrar"}
+              {loading ? "Entrando…" : "Entrar no sistema"}
             </button>
           </form>
 
           {ALLOW_PUBLIC_REGISTER ? (
-            <div className="mt-4 text-center">
-              <a
-                href="/register"
-                className="text-sm font-medium text-gs-orange-600 hover:text-gs-orange-500"
-              >
-                Não tem conta? Cadastre-se como Motorista
+            <p className="mt-6 text-center text-sm text-gs-gray-600">
+              Não tem conta?{" "}
+              <a href="/register" className="font-semibold text-gs-orange-600 hover:text-gs-orange-700">
+                Cadastre-se como motorista
               </a>
-            </div>
+            </p>
           ) : null}
-        </div>
-
-        <div className="mt-6 text-center text-gs-orange-100 text-sm">
-          <p>© 2026 GS Transportes - Sistema de Gestão</p>
         </div>
       </div>
     </div>

@@ -13,7 +13,8 @@ import {
   type VehicleType,
 } from "@/types";
 import toast from "react-hot-toast";
-import { ArrowLeft, Camera, CheckCircle, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Camera, CheckCircle, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import MobilePageHeader from "@/components/layout/MobilePageHeader";
 
 const WIZARD_STEPS = ["Condições", "Fotos gerais", "Pneus", "Revisar"] as const;
 
@@ -240,63 +241,54 @@ const ChecklistPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      <header className="bg-white shadow-sm sticky top-0 z-10 flex items-center px-4 py-3 gap-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 text-gray-600 hover:bg-gray-100 rounded-full"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1">
-          <h1 className="text-lg font-bold text-gray-800">Novo Checklist</h1>
-          {truck && (
-            <p className="text-xs text-gray-500">
-              {truck.plate} · {truck.brand} {truck.model}
-            </p>
-          )}
-        </div>
-        {truck && (
-          <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-1 rounded-full whitespace-nowrap">
-            {doneCount}/{totalRequired} fotos
-          </span>
-        )}
-      </header>
+    <div className="page-shell-driver">
+      <MobilePageHeader
+        title="Novo checklist"
+        subtitle={truck ? `${truck.plate} · ${truck.brand} ${truck.model}` : undefined}
+        backTo="/motorista"
+        badge={
+          truck ? (
+            <span className="badge-neutral whitespace-nowrap">
+              {doneCount}/{totalRequired}
+            </span>
+          ) : undefined
+        }
+      />
 
       {truck && (
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white mx-4 mt-4 p-4 rounded-2xl shadow">
-          <div className="flex justify-between items-start">
+        <div className="brand-hero mx-4 mt-4 animate-fade-in">
+          <div className="flex justify-between items-start gap-3">
             <div>
-              <p className="text-xs text-blue-200 uppercase tracking-wide">
+              <p className="text-xs text-gs-orange-100 uppercase tracking-wide font-semibold">
                 Veículo
               </p>
               <p className="text-3xl font-bold tracking-wider">{truck.plate}</p>
-              <p className="text-sm text-blue-100 mt-0.5">
+              <p className="text-sm text-gs-orange-100/90 mt-0.5">
                 {truck.brand} {truck.model}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-blue-200">Tipo</p>
-              <p className="text-sm font-semibold text-white">
+              <p className="text-xs text-gs-orange-200">Tipo</p>
+              <p className="text-sm font-semibold">
                 {truck.vehicleType
                   ? (
                       VEHICLE_TYPE_LABELS[truck.vehicleType] ?? truck.vehicleType
                     ).split(" (")[0]
                   : "—"}
               </p>
-              <p className="text-xs text-blue-300 mt-0.5">
-                {axles.length} eixos · {tireSlots.length} pneus/estepe
+              <p className="text-xs text-gs-orange-200/80 mt-0.5">
+                {axles.length} eixos · {tireSlots.length} pneus
               </p>
             </div>
           </div>
-          <div className="mt-3">
-            <div className="flex justify-between text-xs text-blue-200 mb-1">
+          <div className="mt-4">
+            <div className="flex justify-between text-xs text-gs-orange-100 mb-1.5">
               <span>Progresso das fotos</span>
-              <span>{pct}%</span>
+              <span className="font-bold">{pct}%</span>
             </div>
-            <div className="w-full bg-blue-500 rounded-full h-1.5">
+            <div className="w-full bg-white/25 rounded-full h-2 overflow-hidden">
               <div
-                className="bg-white h-1.5 rounded-full transition-all"
+                className="bg-white h-2 rounded-full transition-all duration-300"
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -306,7 +298,7 @@ const ChecklistPage: React.FC = () => {
 
       {truck && (
         <nav
-          className="mx-4 mt-3 flex gap-1 overflow-x-auto pb-1"
+          className="mx-4 mt-4 flex gap-2 overflow-x-auto pb-1"
           aria-label="Etapas do checklist"
         >
           {WIZARD_STEPS.map((label, i) => (
@@ -315,12 +307,12 @@ const ChecklistPage: React.FC = () => {
               type="button"
               onClick={() => i < step && setStep(i)}
               disabled={i > step}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+              className={`shrink-0 px-3.5 py-2 rounded-full text-xs font-semibold transition-all ${
                 i === step
-                  ? "bg-blue-600 text-white"
+                  ? "wizard-step-active"
                   : i < step
-                    ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-400"
+                    ? "wizard-step-done"
+                    : "wizard-step-pending"
               }`}
             >
               {i + 1}. {label}
@@ -329,9 +321,9 @@ const ChecklistPage: React.FC = () => {
         </nav>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4 mt-4 px-4 pb-28">
+      <form onSubmit={handleSubmit} className="space-y-4 mt-4 px-4 pb-28 max-w-lg mx-auto sm:max-w-3xl">
         {step === 0 && (
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+        <section className="card-section">
           <h2 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide">
             Condições Gerais
           </h2>
@@ -400,7 +392,7 @@ const ChecklistPage: React.FC = () => {
         )}
 
         {step === 1 && (
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+        <section className="card-section">
           <h2 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide">
             Fotos Gerais
           </h2>
@@ -427,7 +419,7 @@ const ChecklistPage: React.FC = () => {
         )}
 
         {step === 2 && axles.length > 0 && (
-          <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <section className="card-section">
             <div className="flex items-center gap-2 mb-2">
               <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wide">
                 Pneus rodando
@@ -534,7 +526,7 @@ const ChecklistPage: React.FC = () => {
         )}
 
         {step === 3 && (
-          <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
+          <section className="card-section space-y-3">
             <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wide">
               Revisar antes de enviar
             </h2>
@@ -569,7 +561,7 @@ const ChecklistPage: React.FC = () => {
       </form>
 
       {truck && (
-        <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 flex gap-2 z-20">
+        <footer className="fixed bottom-0 inset-x-0 z-20 bg-white/95 backdrop-blur-md border-t border-gs-gray-100 px-4 py-3 flex gap-2 max-w-lg mx-auto sm:max-w-3xl">
           <button
             type="button"
             disabled={step === 0}
@@ -589,7 +581,7 @@ const ChecklistPage: React.FC = () => {
                 }
                 setStep((s) => s + 1);
               }}
-              className="flex-1 flex items-center justify-center gap-1 py-3 rounded-xl bg-blue-600 text-white font-semibold disabled:opacity-50"
+              className="flex-1 btn-primary py-3 disabled:opacity-50"
             >
               Continuar <ChevronRight className="w-5 h-5" />
             </button>
@@ -598,7 +590,7 @@ const ChecklistPage: React.FC = () => {
               type="button"
               disabled={loading || !allPhotosComplete}
               onClick={() => void handleSubmit()}
-              className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold disabled:opacity-50"
+              className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold disabled:opacity-50 transition-colors"
             >
               {loading ? "Enviando…" : "Enviar checklist"}
             </button>

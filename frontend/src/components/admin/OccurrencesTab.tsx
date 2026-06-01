@@ -95,7 +95,7 @@ const OccurrencesTab: React.FC<OccurrencesTabProps> = ({
                 <td className="px-6 py-4 text-sm">
                   <button
                     onClick={() => onOpenDetails(occ)}
-                    className="text-blue-600 hover:text-blue-800 font-medium"
+                    className="link-action"
                   >
                     Ver Detalhes
                   </button>
