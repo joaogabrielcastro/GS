@@ -2,13 +2,25 @@
 
 ## Checklist obrigatório
 
-### 1. Banco de dados
+### 1. Banco de dados (obrigatório após cada deploy com mudança em `schema.prisma`)
 
 ```bash
 cd backend
 npm ci
 npx prisma migrate deploy
 ```
+
+**Sintoma:** painel admin com erro 500 em `/api/dashboard/admin-stats` ou `/api/checklists`.
+
+**Causa usual:** API atualizada, mas migração não rodou no Postgres (colunas `odometer`, `reviewNotes`, `reviewedById`, `reviewedAt` faltando).
+
+**Correção rápida no servidor:**
+
+```bash
+cd backend && npx prisma migrate deploy
+```
+
+Ou aplique manualmente `scripts/production-schema-patch.sql` no banco e reinicie o backend.
 
 Não use apenas `prisma db push` em produção após a primeira migração versionada.
 

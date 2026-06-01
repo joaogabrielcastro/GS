@@ -246,7 +246,14 @@ export const checklistController = {
         totalPages: Math.ceil(total / parsedLimit),
       });
     } catch (error) {
-      return res.status(500).json({ error: "Erro ao listar checklists" });
+      logger.error("Erro ao listar checklists", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return res.status(500).json({
+        error: "Erro ao listar checklists",
+        details: error instanceof Error ? error.message : String(error),
+      });
     }
   },
 

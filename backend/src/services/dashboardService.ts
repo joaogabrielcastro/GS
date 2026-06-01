@@ -27,10 +27,9 @@ export async function getAdminDashboardStats() {
     prisma.dailyChecklist.count({
       where: { createdAt: { gte: todayStart } },
     }),
-    prisma.dailyChecklist.findMany({
+    prisma.dailyChecklist.groupBy({
+      by: ["truckId"],
       where: { createdAt: { gte: todayStart } },
-      distinct: ["truckId"],
-      select: { truckId: true },
     }),
     prisma.dailyChecklist.count({
       where: { reviewStatus: "PENDENTE" },

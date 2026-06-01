@@ -69,12 +69,12 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
 
   return (
     <div className="animate-fade-in">
-      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-3">
-        <h2 className="section-title">Checklists realizados</h2>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:min-w-0">
-          <label className="search-field sm:max-w-md">
+      <div className="flex flex-col gap-4 lg:flex-row lg:justify-between lg:items-start mb-3">
+        <h2 className="section-title shrink-0">Checklists realizados</h2>
+        <div className="flex flex-col gap-3 w-full lg:max-w-2xl">
+          <label className="search-field w-full isolate overflow-hidden">
             <span className="sr-only">Buscar checklist</span>
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gs-gray-400 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 z-10 -translate-y-1/2 w-4 h-4 text-gs-gray-400 pointer-events-none" />
             <input
               type="search"
               value={search}
@@ -84,37 +84,43 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
               className="search-input"
             />
           </label>
-          <label className="sr-only" htmlFor="export-start-date">
-            Data inicial do export
-          </label>
-          <input
-            id="export-start-date"
-            type="date"
-            value={exportStartDate}
-            onChange={(e) => setExportStartDate(e.target.value)}
-            className="shrink-0 input-field py-2"
-            title="Data inicial (export)"
-          />
-          <label className="sr-only" htmlFor="export-end-date">
-            Data final do export
-          </label>
-          <input
-            id="export-end-date"
-            type="date"
-            value={exportEndDate}
-            onChange={(e) => setExportEndDate(e.target.value)}
-            className="shrink-0 input-field py-2"
-            title="Data final (export)"
-          />
-          <button
-            type="button"
-            onClick={() => void handleExport()}
-            disabled={exporting}
-            className="shrink-0 btn-outline py-2 text-sm disabled:opacity-50"
-          >
-            <Download className="w-4 h-4" />
-            {exporting ? "Exportando…" : "Exportar CSV"}
-          </button>
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-end gap-3">
+            <div className="flex flex-wrap items-end gap-2 flex-1 min-w-0">
+              <div className="flex flex-col gap-1 min-w-[9.5rem] flex-1 sm:flex-none">
+                <label htmlFor="export-start-date" className="text-xs font-medium text-gs-gray-600">
+                  Exportar de
+                </label>
+                <input
+                  id="export-start-date"
+                  type="date"
+                  value={exportStartDate}
+                  onChange={(e) => setExportStartDate(e.target.value)}
+                  className="input-field py-2 w-full"
+                />
+              </div>
+              <div className="flex flex-col gap-1 min-w-[9.5rem] flex-1 sm:flex-none">
+                <label htmlFor="export-end-date" className="text-xs font-medium text-gs-gray-600">
+                  Até
+                </label>
+                <input
+                  id="export-end-date"
+                  type="date"
+                  value={exportEndDate}
+                  onChange={(e) => setExportEndDate(e.target.value)}
+                  className="input-field py-2 w-full"
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleExport()}
+              disabled={exporting}
+              className="btn-outline py-2.5 text-sm w-full sm:w-auto sm:shrink-0 disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" />
+              {exporting ? "Exportando…" : "Exportar CSV"}
+            </button>
+          </div>
         </div>
       </div>
       <p className="text-xs text-gray-500 mb-4 sm:hidden">

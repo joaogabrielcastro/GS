@@ -134,7 +134,7 @@
   }
 
   .search-field {
-    @apply relative flex-1 min-w-0;
+    @apply relative block w-full min-w-[12rem];
   }
 
   .search-input {

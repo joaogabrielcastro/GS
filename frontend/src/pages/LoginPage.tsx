@@ -28,9 +28,7 @@ const LoginPage: React.FC = () => {
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-gs-orange-500 via-gs-orange-600 to-gs-orange-900">
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_30%_20%,white_0%,transparent_50%)]" />
         <div className="relative z-10 flex flex-col justify-between p-12 text-white">
-          <div className="rounded-2xl bg-white/10 p-4 backdrop-blur-sm inline-block">
-            <Logo size="lg" />
-          </div>
+          <Logo variant="onDark" size="lg" className="drop-shadow-sm" />
           <div className="max-w-md">
             <h1 className="text-3xl font-bold tracking-tight leading-tight">
               Gestão de frota inteligente
