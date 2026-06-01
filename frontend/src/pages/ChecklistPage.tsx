@@ -13,7 +13,9 @@ import {
   type VehicleType,
 } from "@/types";
 import toast from "react-hot-toast";
-import { ArrowLeft, Camera, CheckCircle, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Camera, CheckCircle, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+
+const WIZARD_STEPS = ["Condições", "Fotos gerais", "Pneus", "Revisar"] as const;
 
 const PhotoButton = ({
   label,
@@ -84,6 +86,7 @@ const ChecklistPage: React.FC = () => {
   const [photoPreviews, setPhotoPreviews] = useState<Record<string, string>>(
     {},
   );
+  const [step, setStep] = useState(0);
 
   const handlePhotoChange = useCallback((fieldName: string, file: File) => {
     setPhotoFiles((prev) => ({ ...prev, [fieldName]: file }));
@@ -144,7 +147,7 @@ const ChecklistPage: React.FC = () => {
     return Array.from({ length: n }, (_, i) => `ESTEPE${i + 1}`);
   }, [truck?.spareCount]);
 
-  const totalRequired = 2 + tireSlots.length;
+  const totalRequired = 2 + tireSlots.length + estepeSlots.length;
 
   const doneCount = useMemo(() => {
     let n = 0;
@@ -153,14 +156,30 @@ const ChecklistPage: React.FC = () => {
     for (const code of tireSlots) {
       if (photoFiles[`tire_${code}`]) n += 1;
     }
+    for (const code of estepeSlots) {
+      if (photoFiles[`tire_${code}`]) n += 1;
+    }
     return n;
-  }, [photoFiles, tireSlots]);
+  }, [photoFiles, tireSlots, estepeSlots]);
 
   const pct = Math.round((doneCount / Math.max(totalRequired, 1)) * 100);
   const allPhotosComplete = doneCount >= totalRequired;
+  const generalPhotosComplete = Boolean(
+    photoFiles.cabinPhoto && photoFiles.canvasPhoto,
+  );
+  const tirePhotosComplete =
+    tireSlots.every((code) => !!photoFiles[`tire_${code}`]) &&
+    estepeSlots.every((code) => !!photoFiles[`tire_${code}`]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const canGoNext = () => {
+    if (step === 0) return true;
+    if (step === 1) return generalPhotosComplete;
+    if (step === 2) return tirePhotosComplete;
+    return allPhotosComplete;
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!truck) return;
     setLoading(true);
     try {
@@ -285,7 +304,33 @@ const ChecklistPage: React.FC = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4 mt-4 px-4">
+      {truck && (
+        <nav
+          className="mx-4 mt-3 flex gap-1 overflow-x-auto pb-1"
+          aria-label="Etapas do checklist"
+        >
+          {WIZARD_STEPS.map((label, i) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => i < step && setStep(i)}
+              disabled={i > step}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                i === step
+                  ? "bg-blue-600 text-white"
+                  : i < step
+                    ? "bg-green-100 text-green-800"
+                    : "bg-gray-100 text-gray-400"
+              }`}
+            >
+              {i + 1}. {label}
+            </button>
+          ))}
+        </nav>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4 mt-4 px-4 pb-28">
+        {step === 0 && (
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
           <h2 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide">
             Condições Gerais
@@ -340,8 +385,21 @@ const ChecklistPage: React.FC = () => {
               </div>
             ))}
           </div>
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">
+              Observações
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm h-24 resize-none"
+              placeholder="Descreva qualquer detalhe importante..."
+            />
+          </div>
         </section>
+        )}
 
+        {step === 1 && (
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
           <h2 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide">
             Fotos Gerais
@@ -360,9 +418,15 @@ const ChecklistPage: React.FC = () => {
               onChange={handlePhotoChange}
             />
           </div>
+          {!generalPhotosComplete && (
+            <p className="text-xs text-amber-700 mt-3 text-center">
+              Tire a foto da cabine e da lona para continuar.
+            </p>
+          )}
         </section>
+        )}
 
-        {axles.length > 0 && (
+        {step === 2 && axles.length > 0 && (
           <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
             <div className="flex items-center gap-2 mb-2">
               <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wide">
@@ -469,41 +533,78 @@ const ChecklistPage: React.FC = () => {
           </section>
         )}
 
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-          <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">
-            Observações
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm h-28 resize-none"
-            placeholder="Descreva qualquer detalhe importante..."
-          />
-        </section>
-
-        <button
-          type="submit"
-          disabled={loading || !allPhotosComplete}
-          className="w-full bg-green-600 hover:bg-green-700 active:scale-95 text-white font-bold py-4 rounded-2xl shadow-lg transition-all disabled:opacity-50 text-base"
-        >
-          {loading
-            ? "Enviando..."
-            : !allPhotosComplete
-              ? `Tire todas as fotos (${doneCount}/${totalRequired})`
-              : `Finalizar Checklist (${doneCount} fotos)`}
-        </button>
-
-        {!allPhotosComplete && (
-          <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-xl text-sm">
-            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-            <p>
-              É necessário tirar todas as fotos antes de enviar o checklist.
-              Faltam <strong>{totalRequired - doneCount}</strong>{" "}
-              {totalRequired - doneCount === 1 ? "foto" : "fotos"}.
-            </p>
-          </div>
+        {step === 3 && (
+          <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
+            <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+              Revisar antes de enviar
+            </h2>
+            <ul className="text-sm text-gray-700 space-y-2">
+              <li>
+                <span className="text-gray-500">Pneus:</span> {tiresCondition}
+              </li>
+              <li>
+                <span className="text-gray-500">Cabine:</span> {cabinCondition}
+              </li>
+              <li>
+                <span className="text-gray-500">Lona:</span> {canvasCondition}
+              </li>
+              <li>
+                <span className="text-gray-500">Geral:</span> {overallCondition}
+              </li>
+              <li>
+                <span className="text-gray-500">Fotos:</span> {doneCount}/{totalRequired}
+              </li>
+            </ul>
+            {!allPhotosComplete && (
+              <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 text-yellow-800 px-3 py-2 rounded-xl text-sm">
+                <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                <p>
+                  Faltam <strong>{totalRequired - doneCount}</strong>{" "}
+                  {totalRequired - doneCount === 1 ? "foto" : "fotos"}.
+                </p>
+              </div>
+            )}
+          </section>
         )}
       </form>
+
+      {truck && (
+        <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 flex gap-2 z-20">
+          <button
+            type="button"
+            disabled={step === 0}
+            onClick={() => setStep((s) => Math.max(0, s - 1))}
+            className="flex items-center justify-center gap-1 px-4 py-3 rounded-xl border border-gray-200 text-gray-700 font-medium disabled:opacity-40"
+          >
+            <ChevronLeft className="w-5 h-5" /> Voltar
+          </button>
+          {step < WIZARD_STEPS.length - 1 ? (
+            <button
+              type="button"
+              disabled={!canGoNext()}
+              onClick={() => {
+                if (!canGoNext()) {
+                  toast.error("Complete esta etapa antes de continuar.");
+                  return;
+                }
+                setStep((s) => s + 1);
+              }}
+              className="flex-1 flex items-center justify-center gap-1 py-3 rounded-xl bg-blue-600 text-white font-semibold disabled:opacity-50"
+            >
+              Continuar <ChevronRight className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={loading || !allPhotosComplete}
+              onClick={() => void handleSubmit()}
+              className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold disabled:opacity-50"
+            >
+              {loading ? "Enviando…" : "Enviar checklist"}
+            </button>
+          )}
+        </footer>
+      )}
     </div>
   );
 };

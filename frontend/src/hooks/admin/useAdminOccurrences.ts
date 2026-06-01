@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { occurrenceService } from "@/services/api";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { toast } from "react-hot-toast";
 import type { Occurrence } from "@/types";
 
@@ -7,6 +8,7 @@ export function useAdminOccurrences(active: boolean) {
   const [items, setItems] = useState<Occurrence[]>([]);
   const [page, setPage] = useState(1);
   const [search, setSearchState] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 350);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedOccurrence, setSelectedOccurrence] = useState<Occurrence | null>(null);
@@ -16,7 +18,7 @@ export function useAdminOccurrences(active: boolean) {
     const result = await occurrenceService.list({
       page,
       limit: 10,
-      search: search.trim() || undefined,
+      search: debouncedSearch.trim() || undefined,
     });
     setItems(result.data);
     setTotal(result.total);
@@ -43,7 +45,7 @@ export function useAdminOccurrences(active: boolean) {
     if (!active) return;
     load().catch(() => toast.error("Erro ao carregar ocorrências"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, page, search]);
+  }, [active, page, debouncedSearch]);
 
   const setSearch = (value: string) => {
     setSearchState(value);

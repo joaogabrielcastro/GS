@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setUser(parsedUser);
 
         // Conectar ao Socket.IO
-        socketService.connect(parsedUser.id);
+        socketService.connect();
       }
 
       setLoading(false);
@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setUser(user);
 
       // Conectar ao Socket.IO
-      socketService.connect(user.id);
+      socketService.connect();
 
       toast.success(`Bem-vindo, ${user.name}!`);
 

@@ -26,6 +26,7 @@ import { errorResponseNormalizer } from "./middleware/errorResponse";
 import { startRefreshTokenCleanupJob } from "./jobs/refreshTokenCleanup";
 import { startUploadCleanupJob } from "./jobs/uploadCleanup";
 import { successResponseWrapper } from "./middleware/successResponse";
+import { attachSocketAuth } from "./lib/socketAuth";
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -97,6 +98,8 @@ const io = new Server(httpServer, {
   },
 });
 
+attachSocketAuth(io);
+
 // Passar Socket.IO para o controller de ocorrências
 occurrenceController.setSocketIO(io);
 
@@ -155,14 +158,10 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/files", fileRoutes);
 
-// Socket.IO - Gerenciamento de conexões
 io.on("connection", (socket) => {
-  logger.info("Socket client connected", { socketId: socket.id });
-
-  // Usuário se junta à sua "sala" pessoal para notificações
-  socket.on("join", (userId: string) => {
-    socket.join(`user_${userId}`);
-    logger.info("User joined socket room", { userId, socketId: socket.id });
+  logger.info("Socket client connected", {
+    socketId: socket.id,
+    userId: socket.data.userId,
   });
 
   socket.on("disconnect", () => {

@@ -51,7 +51,8 @@ const DashboardMotorista: React.FC = () => {
     fetchStats();
 
     // Escutar notificações em tempo real
-    socketService.on("newNotification", (data) => {
+    socketService.on("newNotification", (payload) => {
+      const data = payload as { notification: { title: string } };
       toast.success(data.notification.title);
       setNotifications((prev) => [data.notification, ...prev]);
     });

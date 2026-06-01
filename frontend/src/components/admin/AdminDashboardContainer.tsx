@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { ASSETS_BASE_URL } from "@/config/env";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { getPrivateMediaUrl } from "@/lib/mediaUrls";
 import { dashboardService, AdminStats } from "@/services/dashboardService";
 import { authService, getApiErrorMessage, notificationService } from "@/services/api";
 import OccurrencesTab from "@/components/admin/OccurrencesTab";
 import ChecklistsTab from "@/components/admin/ChecklistsTab";
 import TrucksTab from "@/components/admin/TrucksTab";
+import DriversTab from "@/components/admin/DriversTab";
 import TiresTab from "@/components/admin/TiresTab";
 import TruckModal from "@/components/admin/modals/TruckModal";
 import TireModal from "@/components/admin/modals/TireModal";
@@ -17,7 +19,7 @@ import { useAdminOccurrences } from "@/hooks/admin/useAdminOccurrences";
 import { useAdminChecklists } from "@/hooks/admin/useAdminChecklists";
 import { useAdminTrucks } from "@/hooks/admin/useAdminTrucks";
 import { useAdminTires } from "@/hooks/admin/useAdminTires";
-import { AlertCircle, CheckCircle, Plus, Search, Truck, Users } from "lucide-react";
+import { AlertCircle, CheckCircle, ClipboardList, Truck, Users } from "lucide-react";
 import { toast } from "react-hot-toast";
 import {
   CHECKLIST_REVIEW_LABELS,
@@ -53,41 +55,6 @@ const ADMIN_TAB_META: Record<string, { title: string; description: string }> = {
   },
 };
 
-const getImageUrl = (path: string | null | undefined): string => {
-  if (!path) return "";
-  const normalized = path.replace(/\\/g, "/").trim();
-
-  if (normalized.startsWith("http")) return normalized;
-
-  const withLeadingSlash = normalized.startsWith("/")
-    ? normalized
-    : `/${normalized}`;
-
-  if (withLeadingSlash.startsWith("/uploads/checklist/")) {
-    return `${ASSETS_BASE_URL}${withLeadingSlash.replace("/uploads/checklist/", "/api/files/checklist/")}`;
-  }
-  if (withLeadingSlash.startsWith("/uploads/occurrences/")) {
-    return `${ASSETS_BASE_URL}${withLeadingSlash.replace("/uploads/occurrences/", "/api/files/occurrences/")}`;
-  }
-  if (withLeadingSlash.startsWith("/api/files/")) {
-    return `${ASSETS_BASE_URL}${withLeadingSlash}`;
-  }
-
-  // Compatibilidade com valores legados salvos como "checklist/<arquivo>" ou só "<arquivo>"
-  if (withLeadingSlash.startsWith("/checklist/")) {
-    return `${ASSETS_BASE_URL}${withLeadingSlash.replace("/checklist/", "/api/files/checklist/")}`;
-  }
-  if (withLeadingSlash.startsWith("/occurrences/")) {
-    return `${ASSETS_BASE_URL}${withLeadingSlash.replace("/occurrences/", "/api/files/occurrences/")}`;
-  }
-
-  if (!withLeadingSlash.includes("/")) {
-    return `${ASSETS_BASE_URL}/api/files/checklist/${withLeadingSlash.replace(/^\//, "")}`;
-  }
-
-  return `${ASSETS_BASE_URL}${withLeadingSlash}`;
-};
-
 const AdminDashboardContainer: React.FC = () => {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState(
@@ -100,6 +67,8 @@ const AdminDashboardContainer: React.FC = () => {
   });
   const [drivers, setDrivers] = useState<User[]>([]);
   const [driverSearch, setDriverSearch] = useState("");
+  const debouncedDriverSearch = useDebouncedValue(driverSearch, 350);
+  const [driversLoading, setDriversLoading] = useState(false);
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isDriverModalOpen, setIsDriverModalOpen] = useState(false);
@@ -152,19 +121,22 @@ const AdminDashboardContainer: React.FC = () => {
     let cancelled = false;
     (async () => {
       try {
+        setDriversLoading(true);
         const data = await authService.listUsers(
           "MOTORISTA",
-          driverSearch.trim() || undefined,
+          debouncedDriverSearch.trim() || undefined,
         );
         if (!cancelled) setDrivers(data);
       } catch {
         if (!cancelled) toast.error("Erro ao carregar dados.");
+      } finally {
+        if (!cancelled) setDriversLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [activeTab, driverSearch]);
+  }, [activeTab, debouncedDriverSearch]);
 
   useEffect(() => {
     if (activeTab !== "visao-geral" && activeTab !== "motoristas") {
@@ -306,11 +278,41 @@ const AdminDashboardContainer: React.FC = () => {
           <>
             {activeTab === "visao-geral" && stats && (
               <div className="animate-fade-in">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                  <KPICard
+                    title="Conformidade hoje"
+                    value={`${stats.compliance?.percent ?? 0}%`}
+                    sub={`${stats.compliance?.trucksWithChecklistToday ?? 0} de ${stats.compliance?.activeTrucks ?? 0} caminhões`}
+                    icon={ClipboardList}
+                    color="purple"
+                  />
                   <KPICard title="Caminhões Ativos" value={stats.trucks.active} sub="Em operação" icon={Truck} color="blue" />
                   <KPICard title="Motoristas" value={stats.drivers.total} sub="Cadastrados" icon={Users} color="green" />
                   <KPICard title="Ocorrências" value={stats.occurrences.pending} sub="Pendentes" icon={AlertCircle} color="yellow" />
-                  <KPICard title="Checklists" value={stats.recentChecklists.length} sub="Hoje" icon={CheckCircle} color="purple" />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                  <div className="bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm">
+                    <p className="text-xs font-medium text-gray-500 uppercase">Checklists hoje</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                      {stats.compliance?.checklistsToday ?? 0}
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-amber-100 px-4 py-3 shadow-sm">
+                    <p className="text-xs font-medium text-amber-800 uppercase">Aguardando revisão</p>
+                    <p className="text-2xl font-bold text-amber-900 mt-1">
+                      {stats.compliance?.pendingReview ?? 0}
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
+                    <p className="text-sm text-gray-600">
+                      Frota com checklist registrado hoje:{" "}
+                      <span className="font-semibold text-gray-900">
+                        {stats.compliance?.trucksWithChecklistToday ?? 0}
+                      </span>
+                    </p>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -414,108 +416,21 @@ const AdminDashboardContainer: React.FC = () => {
             )}
 
             {activeTab === "motoristas" && (
-              <div className="animate-fade-in">
-                <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6">
-                  <h2 className="text-xl font-bold text-gray-800">Equipe de Motoristas</h2>
-                  <div className="flex flex-col sm:flex-row gap-3 sm:items-center w-full sm:w-auto sm:min-w-0 sm:justify-end">
-                    <label className="relative flex-1 sm:max-w-md min-w-0">
-                      <span className="sr-only">Buscar motorista</span>
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                      <input
-                        type="search"
-                        value={driverSearch}
-                        onChange={(e) => setDriverSearch(e.target.value)}
-                        placeholder="Nome, e-mail, telefone ou CPF…"
-                        autoComplete="off"
-                        className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
-                      />
-                    </label>
-                    <button
-                      onClick={() => {
-                        setEditingDriver(null);
-                        setIsDriverModalOpen(true);
-                      }}
-                      className="shrink-0 bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors whitespace-nowrap"
-                    >
-                      <Plus className="w-5 h-5" /> Novo Motorista
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                  <table className="w-full text-left">
-                    <thead className="bg-gray-50 border-b border-gray-200">
-                      <tr>
-                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nome</th>
-                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
-                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Telefone</th>
-                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cadastro</th>
-                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {drivers.map((driver) => (
-                        <tr key={driver.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center">
-                              <div className="h-10 w-10 flex-shrink-0 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
-                                {driver.name.charAt(0)}
-                              </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">{driver.name}</div>
-                                <div className="text-xs text-gray-500">CPF: {driver.cpf || "-"}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-600">{driver.email}</td>
-                          <td className="px-6 py-4 text-sm text-gray-600">{driver.phone || "-"}</td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                driver.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                              }`}
-                            >
-                              {driver.active ? "Ativo" : "Inativo"}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-500">
-                            {new Date(driver.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="px-6 py-4 text-sm">
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => {
-                                  setEditingDriver(driver);
-                                  setIsDriverModalOpen(true);
-                                }}
-                                className="text-blue-600 hover:text-blue-800 font-medium"
-                              >
-                                Editar
-                              </button>
-                              <button
-                                onClick={() => void handleDeleteDriver(driver)}
-                                className="text-red-600 hover:text-red-800 font-medium"
-                              >
-                                Excluir
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                      {drivers.length === 0 && (
-                        <tr>
-                          <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                            {driverSearch.trim()
-                              ? "Nenhum motorista encontrado para esta busca."
-                              : "Nenhum motorista encontrado."}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <DriversTab
+                drivers={drivers}
+                search={driverSearch}
+                loading={driversLoading}
+                onSearchChange={setDriverSearch}
+                onNewDriver={() => {
+                  setEditingDriver(null);
+                  setIsDriverModalOpen(true);
+                }}
+                onEditDriver={(driver) => {
+                  setEditingDriver(driver);
+                  setIsDriverModalOpen(true);
+                }}
+                onDeleteDriver={(driver) => void handleDeleteDriver(driver)}
+              />
             )}
 
             {activeTab === "ocorrencias" && (
@@ -661,7 +576,7 @@ const AdminDashboardContainer: React.FC = () => {
         isOpen={checklists.isChecklistModalOpen}
         checklist={checklists.selectedChecklist}
         onClose={() => checklists.setIsChecklistModalOpen(false)}
-        getImageUrl={getImageUrl}
+        getImageUrl={getPrivateMediaUrl}
         onReviewed={async () => {
           await checklists.reload();
           if (activeTab === "visao-geral") {

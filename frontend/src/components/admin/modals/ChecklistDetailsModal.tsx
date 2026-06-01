@@ -29,6 +29,7 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
   onReviewed,
 }) => {
   const [reviewSubmitting, setReviewSubmitting] = useState<false | "APROVADO" | "REJEITADO">(false);
+  const [reviewNotes, setReviewNotes] = useState("");
   const sortedPhotos = useMemo(() => {
     if (!checklist?.photos?.length) return [] as ChecklistPhoto[];
     const vt = checklist.truck?.vehicleType as VehicleType | undefined;
@@ -48,9 +49,16 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
 
   const handleReview = async (next: "APROVADO" | "REJEITADO") => {
     if (!onReviewed) return;
+    if (next === "REJEITADO" && !reviewNotes.trim()) {
+      toast.error("Informe o motivo da rejeição.");
+      return;
+    }
     setReviewSubmitting(next);
     try {
-      await checklistService.review(checklist.id, { reviewStatus: next });
+      await checklistService.review(checklist.id, {
+        reviewStatus: next,
+        reviewNotes: reviewNotes.trim() || undefined,
+      });
       toast.success(next === "APROVADO" ? "Checklist aprovado." : "Checklist rejeitado.");
       await onReviewed();
       onClose();
@@ -114,9 +122,28 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
               Revisão administrativa
             </p>
             <p className="text-sm font-medium text-gray-900 mt-1">{CHECKLIST_REVIEW_LABELS[reviewSt]}</p>
+            {checklist.reviewNotes ? (
+              <p className="text-xs text-gray-600 mt-2">
+                <span className="font-medium">Observação:</span> {checklist.reviewNotes}
+              </p>
+            ) : null}
+            {checklist.reviewedBy?.name && checklist.reviewedAt ? (
+              <p className="text-xs text-gray-400 mt-1">
+                Por {checklist.reviewedBy.name} em{" "}
+                {new Date(checklist.reviewedAt).toLocaleString()}
+              </p>
+            ) : null}
           </div>
           {reviewSt === "PENDENTE" && onReviewed ? (
-            <div className="flex flex-wrap gap-2 shrink-0">
+            <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto sm:min-w-[220px]">
+              <textarea
+                value={reviewNotes}
+                onChange={(e) => setReviewNotes(e.target.value)}
+                placeholder="Observação (obrigatória ao rejeitar)"
+                rows={2}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 disabled={!!reviewSubmitting}
@@ -133,6 +160,7 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
               >
                 {reviewSubmitting === "REJEITADO" ? "Salvando…" : "Rejeitar"}
               </button>
+            </div>
             </div>
           ) : null}
         </div>

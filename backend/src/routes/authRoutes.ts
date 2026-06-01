@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { authController } from "../controllers/authController";
 import { authenticate, authorize } from "../middleware/auth";
+import { publicRegisterGuard } from "../middleware/publicRegisterGuard";
+import { loginRateLimit } from "../middleware/loginRateLimit";
 import { validate } from "../middleware/validate";
 import {
   createUserBodySchema,
@@ -15,8 +17,18 @@ import {
 const router = Router();
 
 // Rotas públicas
-router.post("/register", validate({ body: registerBodySchema }), authController.register);
-router.post("/login", validate({ body: loginBodySchema }), authController.login);
+router.post(
+  "/register",
+  publicRegisterGuard,
+  validate({ body: registerBodySchema }),
+  authController.register,
+);
+router.post(
+  "/login",
+  loginRateLimit,
+  validate({ body: loginBodySchema }),
+  authController.login,
+);
 router.post("/refresh-token", authController.refreshToken);
 router.post("/logout", authController.logout);
 

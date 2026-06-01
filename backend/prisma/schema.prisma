@@ -100,6 +100,7 @@ model User {
   occurrences   Occurrence[]
   notifications NotificationUser[]
   refreshTokens RefreshToken[]
+  reviewedChecklists DailyChecklist[] @relation("ChecklistReviewedBy")
   
   @@index([email])
   @@index([role])
@@ -217,11 +218,15 @@ model DailyChecklist {
   /// Hodômetro informado no envio (km); legados podem ficar nulos.
   odometer          Int?
   reviewStatus      ChecklistReviewStatus @default(PENDENTE)
+  reviewNotes       String?
+  reviewedById      String?
+  reviewedAt        DateTime?
   createdAt         DateTime @default(now())
 
   // Relations
   truck  Truck           @relation(fields: [truckId], references: [id])
   driver User            @relation(fields: [driverId], references: [id])
+  reviewedBy User?       @relation("ChecklistReviewedBy", fields: [reviewedById], references: [id])
   photos ChecklistPhoto[]
 
   @@index([truckId])

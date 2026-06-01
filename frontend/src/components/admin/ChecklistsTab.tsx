@@ -1,5 +1,7 @@
-import React from "react";
-import { Eye, Search } from "lucide-react";
+import React, { useState } from "react";
+import { Download, Eye, Search } from "lucide-react";
+import { checklistService } from "@/services/api";
+import toast from "react-hot-toast";
 import Pagination from "@/components/Pagination";
 import {
   CHECKLIST_REVIEW_LABELS,
@@ -28,7 +30,32 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
   onPageChange,
   onOpenDetails,
 }) => {
+  const [exporting, setExporting] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState("");
+  const [exportEndDate, setExportEndDate] = useState("");
   const searchTrimmed = search.trim();
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const blob = await checklistService.exportCsv({
+        search: searchTrimmed || undefined,
+        startDate: exportStartDate || undefined,
+        endDate: exportEndDate || undefined,
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `checklists-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success("Exportação concluída.");
+    } catch {
+      toast.error("Erro ao exportar checklists.");
+    } finally {
+      setExporting(false);
+    }
+  };
   const emptyMessage =
     searchTrimmed.length > 0
       ? "Nenhum checklist encontrado para esta busca."
@@ -44,18 +71,51 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
     <div className="animate-fade-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-3">
         <h2 className="text-lg sm:text-xl font-bold text-gray-800">Checklists Realizados</h2>
-        <label className="relative w-full sm:max-w-md min-w-0">
-          <span className="sr-only">Buscar checklist</span>
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:min-w-0">
+          <label className="relative flex-1 sm:max-w-md min-w-0">
+            <span className="sr-only">Buscar checklist</span>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Placa, carreta, motorista…"
+              autoComplete="off"
+              className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
+            />
+          </label>
+          <label className="sr-only" htmlFor="export-start-date">
+            Data inicial do export
+          </label>
           <input
-            type="search"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Placa, carreta, motorista…"
-            autoComplete="off"
-            className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
+            id="export-start-date"
+            type="date"
+            value={exportStartDate}
+            onChange={(e) => setExportStartDate(e.target.value)}
+            className="shrink-0 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900"
+            title="Data inicial (export)"
           />
-        </label>
+          <label className="sr-only" htmlFor="export-end-date">
+            Data final do export
+          </label>
+          <input
+            id="export-end-date"
+            type="date"
+            value={exportEndDate}
+            onChange={(e) => setExportEndDate(e.target.value)}
+            className="shrink-0 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900"
+            title="Data final (export)"
+          />
+          <button
+            type="button"
+            onClick={() => void handleExport()}
+            disabled={exporting}
+            className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            <Download className="w-4 h-4" />
+            {exporting ? "Exportando…" : "Exportar CSV"}
+          </button>
+        </div>
       </div>
       <p className="text-xs text-gray-500 mb-4 sm:hidden">
         Deslize a tabela para o lado para ver todas as colunas.

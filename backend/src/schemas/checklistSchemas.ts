@@ -11,6 +11,7 @@ export const checklistIdParamSchema = z.object({
 
 export const reviewChecklistBodySchema = z.object({
   reviewStatus: z.enum(["APROVADO", "REJEITADO"]),
+  reviewNotes: z.string().max(2000).optional(),
 });
 
 const checklistPhotoSchema = z.object({

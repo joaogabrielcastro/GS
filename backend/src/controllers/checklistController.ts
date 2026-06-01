@@ -1,12 +1,10 @@
 import { Request, Response } from "express";
-import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { buildPrivateFileUrl } from "../lib/storage";
 import { logger } from "../lib/logger";
-
-function normalizePlate(value: string) {
-  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-}
+import { buildChecklistListWhere } from "../services/checklistQuery";
+import { reviewChecklist } from "../services/checklistReviewService";
+import { exportChecklistsCsv } from "../services/checklistExportService";
 
 type ChecklistPhotoInput = {
   category: string;
@@ -197,41 +195,15 @@ export const checklistController = {
       );
       const skip = (parsedPage - 1) * parsedLimit;
 
-      const where: Prisma.DailyChecklistWhereInput = {};
-
-      // Motorista só vê seus próprios checklists
-      if (userRole === "MOTORISTA") {
-        where.driverId = userId;
-      } else {
-        if (driverIdValue) where.driverId = driverIdValue;
-      }
-
-      if (truckIdValue) where.truckId = truckIdValue;
-
-      if (startDate || endDate) {
-        where.date = {};
-        if (startDate) where.date.gte = new Date(startDate as string);
-        if (endDate) where.date.lte = new Date(endDate as string);
-      }
-
-      const searchRaw = typeof search === "string" ? search.trim() : "";
-      if (searchRaw) {
-        const normPlate = normalizePlate(searchRaw);
-        const searchOr: Prisma.DailyChecklistWhereInput[] = [
-          { driver: { name: { contains: searchRaw, mode: "insensitive" } } },
-          { truck: { plate: { contains: searchRaw, mode: "insensitive" } } },
-        ];
-        if (normPlate.length >= 5) {
-          searchOr.push({ truck: { trailerPlates: { has: normPlate } } });
-        }
-        const existingAnd = where.AND;
-        const andArr = Array.isArray(existingAnd)
-          ? [...existingAnd]
-          : existingAnd != null
-            ? [existingAnd]
-            : [];
-        where.AND = [...andArr, { OR: searchOr }];
-      }
+      const where = buildChecklistListWhere({
+        userRole,
+        userId,
+        truckId: truckIdValue,
+        driverId: driverIdValue,
+        startDate: typeof startDate === "string" ? startDate : undefined,
+        endDate: typeof endDate === "string" ? endDate : undefined,
+        search: typeof search === "string" ? search : undefined,
+      });
 
       const [total, checklists] = await Promise.all([
         prisma.dailyChecklist.count({ where }),
@@ -278,6 +250,44 @@ export const checklistController = {
     }
   },
 
+  async exportCsv(req: Request, res: Response) {
+    try {
+      const {
+        truckId,
+        driverId,
+        startDate,
+        endDate,
+        search,
+      } = req.query;
+      const userRole = req.user?.role;
+      const userId = req.user?.id;
+      if (!userRole || !userId) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const csv = await exportChecklistsCsv({
+        userRole,
+        userId,
+        truckId: typeof truckId === "string" ? truckId : undefined,
+        driverId: typeof driverId === "string" ? driverId : undefined,
+        startDate: typeof startDate === "string" ? startDate : undefined,
+        endDate: typeof endDate === "string" ? endDate : undefined,
+        search: typeof search === "string" ? search : undefined,
+      });
+
+      const filename = `checklists-${new Date().toISOString().slice(0, 10)}.csv`;
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      return res.send(csv);
+    } catch (error) {
+      logger.error("Erro ao exportar checklists", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return res.status(500).json({ error: "Erro ao exportar checklists" });
+    }
+  },
+
   // Buscar checklist por ID
   async getById(req: Request, res: Response) {
     try {
@@ -313,36 +323,24 @@ export const checklistController = {
   async review(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { reviewStatus } = req.body as { reviewStatus: "APROVADO" | "REJEITADO" };
+      const reviewerId = req.user?.id;
+      if (!reviewerId) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+      const { reviewStatus, reviewNotes } = req.body as {
+        reviewStatus: "APROVADO" | "REJEITADO";
+        reviewNotes?: string;
+      };
 
-      const existing = await prisma.dailyChecklist.findUnique({
-        where: { id },
-        select: { id: true },
+      const checklist = await reviewChecklist({
+        checklistId: id,
+        reviewStatus,
+        reviewerId,
+        reviewNotes,
       });
-      if (!existing) {
+      if (!checklist) {
         return res.status(404).json({ error: "Checklist não encontrado" });
       }
-
-      const checklist = await prisma.dailyChecklist.update({
-        where: { id },
-        data: { reviewStatus },
-        include: {
-          truck: {
-            select: {
-              id: true,
-              plate: true,
-              model: true,
-              trailerPlates: true,
-              vehicleType: true,
-              spareCount: true,
-            },
-          },
-          driver: {
-            select: { id: true, name: true, email: true },
-          },
-          photos: { orderBy: { axleNumber: "asc" } },
-        },
-      });
 
       return res.json({ message: "Revisão registrada", checklist });
     } catch (error) {

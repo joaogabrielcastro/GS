@@ -429,6 +429,9 @@ export interface DailyChecklist {
   latitude?: number;
   longitude?: number;
   reviewStatus?: ChecklistReviewStatus;
+  reviewNotes?: string;
+  reviewedAt?: string;
+  reviewedBy?: { id: string; name: string };
   cabinPhotoUrl?: string;
   tiresPhotoUrl?: string;
   canvasPhotoUrl?: string;

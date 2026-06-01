@@ -1,61 +1,13 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { logger } from "../lib/logger";
+import { getAdminDashboardStats } from "../services/dashboardService";
 
 export const dashboardController = {
   async getAdminStats(req: Request, res: Response) {
     try {
-      const [
-        activeTrucksCount,
-        driversCount,
-        pendingOccurrencesCount,
-        recentActivities,
-        recentChecklists,
-      ] = await Promise.all([
-        prisma.truck.count({ where: { status: "ATIVO" } }),
-        prisma.user.count({ where: { role: "MOTORISTA", active: true } }),
-        prisma.occurrence.count({
-          where: { status: { in: ["PENDENTE", "EM_ANALISE"] } },
-        }),
-        prisma.occurrence.findMany({
-          take: 5,
-          orderBy: { createdAt: "desc" },
-          include: {
-            truck: { select: { plate: true } },
-            driver: { select: { name: true } },
-          },
-        }),
-        prisma.dailyChecklist.findMany({
-          take: 5,
-          orderBy: { createdAt: "desc" },
-          include: {
-            truck: { select: { plate: true } },
-            driver: { select: { name: true } },
-          },
-        }),
-      ]);
-
-      res.json({
-        trucks: { active: activeTrucksCount },
-        drivers: { total: driversCount },
-        occurrences: { pending: pendingOccurrencesCount },
-        recentActivity: recentActivities.map((occ) => ({
-          type: "OCCURRENCE",
-          id: occ.id,
-          description: `Ocorrência ${occ.type} em ${occ.truck.plate}`,
-          user: occ.driver.name,
-          date: occ.createdAt,
-          status: occ.status,
-        })),
-        recentChecklists: recentChecklists.map((check) => ({
-          type: "CHECKLIST",
-          id: check.id,
-          description: `Checklist realizado em ${check.truck.plate}`,
-          user: check.driver.name,
-          date: check.createdAt,
-          status: check.reviewStatus,
-        })),
-      });
+      const stats = await getAdminDashboardStats();
+      res.json(stats);
     } catch (error) {
       logger.error("Erro ao buscar dados do dashboard", {
         requestId: req.requestId,

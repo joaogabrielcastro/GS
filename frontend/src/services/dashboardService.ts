@@ -12,6 +12,13 @@ export interface AdminStats {
   occurrences: {
     pending: number;
   };
+  compliance: {
+    percent: number;
+    trucksWithChecklistToday: number;
+    activeTrucks: number;
+    checklistsToday: number;
+    pendingReview: number;
+  };
   recentActivity: Array<{
     type: string;
     id: string;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { checklistService } from "@/services/api";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { toast } from "react-hot-toast";
 import type { DailyChecklist } from "@/types";
 
@@ -7,6 +8,7 @@ export function useAdminChecklists(active: boolean) {
   const [items, setItems] = useState<DailyChecklist[]>([]);
   const [page, setPage] = useState(1);
   const [search, setSearchState] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 350);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedChecklist, setSelectedChecklist] = useState<DailyChecklist | null>(null);
@@ -16,7 +18,7 @@ export function useAdminChecklists(active: boolean) {
     const result = await checklistService.list({
       page,
       limit: 10,
-      search: search.trim() || undefined,
+      search: debouncedSearch.trim() || undefined,
     });
     setItems(result.data);
     setTotal(result.total);
@@ -27,7 +29,7 @@ export function useAdminChecklists(active: boolean) {
     if (!active) return;
     load().catch(() => toast.error("Erro ao carregar checklists"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, page, search]);
+  }, [active, page, debouncedSearch]);
 
   const setSearch = (value: string) => {
     setSearchState(value);

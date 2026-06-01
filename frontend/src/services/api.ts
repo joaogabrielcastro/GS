@@ -225,11 +225,25 @@ export const checklistService = {
     const response = await api.get("/checklists", { params });
     return response.data as PaginatedResponse<DailyChecklist>;
   },
+  exportCsv: async (opts?: { search?: string; startDate?: string; endDate?: string }) => {
+    const params: Record<string, string> = {};
+    if (opts?.search?.trim()) params.search = opts.search.trim();
+    if (opts?.startDate) params.startDate = opts.startDate;
+    if (opts?.endDate) params.endDate = opts.endDate;
+    const response = await api.get("/checklists/export", {
+      params,
+      responseType: "blob",
+    });
+    return response.data as Blob;
+  },
   getById: async (id: string) => {
     const response = await api.get(`/checklists/${id}`);
     return response.data as DailyChecklist;
   },
-  review: async (id: string, body: { reviewStatus: "APROVADO" | "REJEITADO" }) => {
+  review: async (
+    id: string,
+    body: { reviewStatus: "APROVADO" | "REJEITADO"; reviewNotes?: string },
+  ) => {
     const response = await api.patch(`/checklists/${id}/review`, body);
     return response.data as { message: string; checklist: DailyChecklist };
   },

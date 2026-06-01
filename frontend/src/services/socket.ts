@@ -4,14 +4,14 @@ import { SOCKET_URL } from "@/config/env";
 class SocketService {
   private socket: Socket | null = null;
 
-  connect(userId: string) {
+  connect() {
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+
     if (!this.socket) {
       this.socket = io(SOCKET_URL, {
         transports: ["websocket"],
-      });
-
-      this.socket.on("connect", () => {
-        this.socket?.emit("join", userId);
+        auth: { token },
       });
     }
 
@@ -25,16 +25,12 @@ class SocketService {
     }
   }
 
-  on(event: string, callback: (...args: any[]) => void) {
+  on(event: string, callback: (...args: unknown[]) => void) {
     this.socket?.on(event, callback);
   }
 
-  off(event: string, callback?: (...args: any[]) => void) {
+  off(event: string, callback?: (...args: unknown[]) => void) {
     this.socket?.off(event, callback);
-  }
-
-  emit(event: string, data?: any) {
-    this.socket?.emit(event, data);
   }
 }
 

@@ -10,7 +10,6 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.17.9",
     "axios": "^1.6.5",
     "lucide-react": "^0.303.0",
     "react": "^18.2.0",

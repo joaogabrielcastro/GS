@@ -1,18 +1,17 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
-// Páginas
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
+import { ALLOW_PUBLIC_REGISTER } from "@/config/env";
 import DashboardMotorista from "@/pages/DashboardMotorista";
 import DashboardAdmin from "@/pages/DashboardAdmin";
 import DashboardFinanceiro from "@/pages/DashboardFinanceiro";
 import ChecklistPage from "@/pages/ChecklistPage";
 import ReportIssuePage from "@/pages/ReportIssuePage";
-// Componente de rota protegida
+
 const ProtectedRoute: React.FC<{
   children: React.ReactNode;
   allowedRoles?: string[];
@@ -41,7 +40,6 @@ const ProtectedRoute: React.FC<{
   return <>{children}</>;
 };
 
-// Componente de redirecionamento baseado no papel
 const RoleBasedRedirect: React.FC = () => {
   const { user, loading } = useAuth();
 
@@ -72,100 +70,91 @@ const RoleBasedRedirect: React.FC = () => {
   }
 };
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-  },
-});
-
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          {ALLOW_PUBLIC_REGISTER ? (
             <Route path="/register" element={<RegisterPage />} />
+          ) : null}
 
-            <Route
-              path="/motorista"
-              element={
-                <ProtectedRoute allowedRoles={["MOTORISTA"]}>
-                  <DashboardMotorista />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/checklist/novo"
-              element={
-                <ProtectedRoute allowedRoles={["MOTORISTA"]}>
-                  <ChecklistPage />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/ocorrencias/nova"
-              element={
-                <ProtectedRoute allowedRoles={["MOTORISTA"]}>
-                  <ReportIssuePage />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute allowedRoles={["ADMINISTRADOR"]}>
-                  <DashboardAdmin />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/financeiro"
-              element={
-                <ProtectedRoute allowedRoles={["FINANCEIRO"]}>
-                  <DashboardFinanceiro />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route path="/" element={<RoleBasedRedirect />} />
-
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: "#363636",
-                color: "#fff",
-              },
-              success: {
-                duration: 3000,
-                iconTheme: {
-                  primary: "#4ade80",
-                  secondary: "#fff",
-                },
-              },
-              error: {
-                duration: 4000,
-                iconTheme: {
-                  primary: "#ef4444",
-                  secondary: "#fff",
-                },
-              },
-            }}
+          <Route
+            path="/motorista"
+            element={
+              <ProtectedRoute allowedRoles={["MOTORISTA"]}>
+                <DashboardMotorista />
+              </ProtectedRoute>
+            }
           />
-        </AuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+
+          <Route
+            path="/checklist/novo"
+            element={
+              <ProtectedRoute allowedRoles={["MOTORISTA"]}>
+                <ChecklistPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ocorrencias/nova"
+            element={
+              <ProtectedRoute allowedRoles={["MOTORISTA"]}>
+                <ReportIssuePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={["ADMINISTRADOR"]}>
+                <DashboardAdmin />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/financeiro"
+            element={
+              <ProtectedRoute allowedRoles={["FINANCEIRO"]}>
+                <DashboardFinanceiro />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="/" element={<RoleBasedRedirect />} />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: "#363636",
+              color: "#fff",
+            },
+            success: {
+              duration: 3000,
+              iconTheme: {
+                primary: "#4ade80",
+                secondary: "#fff",
+              },
+            },
+            error: {
+              duration: 4000,
+              iconTheme: {
+                primary: "#ef4444",
+                secondary: "#fff",
+              },
+            },
+          }}
+        />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

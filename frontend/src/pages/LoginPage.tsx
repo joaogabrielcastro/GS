@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Logo from "@/components/Logo";
+import { ALLOW_PUBLIC_REGISTER } from "@/config/env";
 
 const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -83,14 +84,16 @@ const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-4 text-center">
-            <a
-              href="/register"
-              className="text-sm font-medium text-gs-orange-600 hover:text-gs-orange-500"
-            >
-              Não tem conta? Cadastre-se como Motorista
-            </a>
-          </div>
+          {ALLOW_PUBLIC_REGISTER ? (
+            <div className="mt-4 text-center">
+              <a
+                href="/register"
+                className="text-sm font-medium text-gs-orange-600 hover:text-gs-orange-500"
+              >
+                Não tem conta? Cadastre-se como Motorista
+              </a>
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-6 text-center text-gs-orange-100 text-sm">

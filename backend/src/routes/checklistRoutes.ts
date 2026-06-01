@@ -30,6 +30,13 @@ router.post(
 );
 router.get("/", validate({ query: listChecklistsQuerySchema }), checklistController.list);
 
+router.get(
+  "/export",
+  authorize("ADMINISTRADOR", "FINANCEIRO"),
+  validate({ query: listChecklistsQuerySchema }),
+  checklistController.exportCsv,
+);
+
 router.patch(
   "/:id/review",
   authorize("ADMINISTRADOR"),

@@ -2,11 +2,14 @@ import fs from "fs";
 import path from "path";
 import { logger } from "../lib/logger";
 import { prisma } from "../lib/prisma";
+import {
+  getUploadCleanupFolders,
+  isUploadCleanupEnabled,
+  type UploadFolder,
+} from "../lib/uploadCleanupConfig";
 
-const DEFAULT_RETENTION_DAYS = 30;
+const DEFAULT_RETENTION_DAYS = 3650;
 const DEFAULT_INTERVAL_HOURS = 24;
-const UPLOAD_FOLDERS = ["checklist", "occurrences", "tires"] as const;
-type UploadFolder = (typeof UPLOAD_FOLDERS)[number];
 
 function parsePositiveNumber(raw: string | undefined, fallback: number) {
   const parsed = raw ? Number(raw) : fallback;
@@ -40,7 +43,6 @@ function buildUrlCandidates(folder: UploadFolder, filename: string) {
     `${folder}/${filename}`,
   ];
 
-  // Compatibilidade com registros antigos que guardaram só o nome do arquivo.
   if (folder === "checklist") {
     base.push(filename);
   }
@@ -79,7 +81,9 @@ async function cleanupDatabaseReferences(
     });
 
     for (const row of affected) {
-      const nextPhotoUrls = row.photoUrls.filter((url) => !occurrenceUrls.includes(url));
+      const nextPhotoUrls = row.photoUrls.filter(
+        (url) => !occurrenceUrls.includes(url),
+      );
       if (nextPhotoUrls.length === row.photoUrls.length) continue;
 
       await prisma.occurrence.update({
@@ -105,6 +109,14 @@ async function cleanupDatabaseReferences(
 }
 
 async function cleanupOldUploads() {
+  const folders = getUploadCleanupFolders();
+  if (folders.length === 0) {
+    logger.info("upload_cleanup_skipped", {
+      reason: "no_eligible_folders",
+    });
+    return;
+  }
+
   const uploadRoot = getUploadRoot();
   const retentionDays = getRetentionDays();
   const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
@@ -114,7 +126,7 @@ async function cleanupOldUploads() {
   let scannedCount = 0;
   const deletedByFolder: Partial<Record<UploadFolder, string[]>> = {};
 
-  for (const folder of UPLOAD_FOLDERS) {
+  for (const folder of folders) {
     const folderPath = path.resolve(uploadRoot, folder);
 
     if (!fs.existsSync(folderPath)) continue;
@@ -160,6 +172,7 @@ async function cleanupOldUploads() {
 
   logger.info("upload_cleanup", {
     uploadRoot,
+    folders,
     retentionDays,
     cutoffDate: cutoffDate.toISOString(),
     scannedCount,
@@ -172,6 +185,15 @@ async function cleanupOldUploads() {
 }
 
 export function startUploadCleanupJob() {
+  if (!isUploadCleanupEnabled()) {
+    logger.info("upload_cleanup_disabled", {
+      hint: "Defina UPLOAD_CLEANUP_ENABLED=true apenas se souber o que está fazendo.",
+      uploadRoot: getUploadRoot(),
+    });
+    return;
+  }
+
+  const folders = getUploadCleanupFolders();
   const intervalHours = getCleanupIntervalHours();
   const intervalMs = intervalHours * 60 * 60 * 1000;
 
@@ -192,6 +214,7 @@ export function startUploadCleanupJob() {
   logger.info("upload_cleanup_started", {
     intervalHours,
     retentionDays: getRetentionDays(),
+    folders,
     uploadRoot: getUploadRoot(),
   });
 }
