@@ -47,6 +47,13 @@ router.patch(
   checklistController.review,
 );
 
+router.delete(
+  "/:id",
+  authorize("ADMINISTRADOR"),
+  validate({ params: checklistIdParamSchema }),
+  checklistController.remove,
+);
+
 router.get("/:id", validate({ params: checklistIdParamSchema }), checklistController.getById);
 
 export default router;

@@ -592,6 +592,19 @@ const AdminDashboardContainer: React.FC = () => {
             }
           }
         }}
+        onDeleted={async () => {
+          checklists.setIsChecklistModalOpen(false);
+          checklists.setSelectedChecklist(null);
+          await checklists.reload();
+          if (activeTab === "visao-geral") {
+            try {
+              const data = await dashboardService.getAdminStats();
+              setStats(data);
+            } catch {
+              toast.error("Erro ao atualizar visão geral.");
+            }
+          }
+        }}
       />
 
       <TireModal

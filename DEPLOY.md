@@ -118,6 +118,15 @@ Use `scripts/backup.sh` no cron do VPS (ajuste `DATABASE_URL` e paths).
 2. Restaurar dump PostgreSQL
 3. Reiniciar backend
 
+## Erro 429 no login
+
+Significa **muitas tentativas com senha errada** no mesmo IP em 15 minutos.
+
+- Após deploy com `skipSuccessfulRequests`, **logins corretos não contam** no limite.
+- Opcional: `LOGIN_RATE_LIMIT_MAX=40` (padrão 40 falhas / 15 min).
+- Se ainda bloquear: aguarde 15 min ou reinicie o container backend (zera contador em memória).
+- Confirme `TRUST_PROXY=1` no Coolify para o IP não ser o do proxy para todos os usuários.
+
 ## Socket.IO
 
 O cliente envia JWT em `auth.token`. Não é mais possível entrar na sala de outro usuário informando `userId` manualmente.

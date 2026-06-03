@@ -44,8 +44,25 @@ function isSuccessEnvelope<T>(data: unknown): data is ApiSuccessEnvelope<T> {
 
 export function getApiErrorMessage(error: unknown, fallback = "Erro na requisição") {
   const axiosError = error as {
-    response?: { data?: ApiErrorEnvelope | { error?: string; message?: string } };
+    response?: {
+      status?: number;
+      data?: ApiErrorEnvelope | { error?: string | { message?: string }; message?: string };
+    };
   };
+
+  if (axiosError.response?.status === 429) {
+    const data = axiosError.response.data;
+    if (data && typeof data === "object") {
+      if ("error" in data && typeof data.error === "object" && data.error?.message) {
+        return data.error.message;
+      }
+      if ("message" in data && typeof data.message === "string") {
+        return data.message;
+      }
+    }
+    return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+  }
+
   const data = axiosError.response?.data;
   if (!data || typeof data !== "object") return fallback;
 
@@ -247,6 +264,10 @@ export const checklistService = {
   ) => {
     const response = await api.patch(`/checklists/${id}/review`, body);
     return response.data as { message: string; checklist: DailyChecklist };
+  },
+  remove: async (id: string) => {
+    const response = await api.delete(`/checklists/${id}`);
+    return response.data as { message: string };
   },
 };
 

@@ -4,6 +4,7 @@ import { buildPrivateFileUrl } from "../lib/storage";
 import { logger } from "../lib/logger";
 import { buildChecklistListWhere } from "../services/checklistQuery";
 import { reviewChecklist } from "../services/checklistReviewService";
+import { deleteChecklistById } from "../services/checklistDeleteService";
 import { exportChecklistsCsv } from "../services/checklistExportService";
 
 type ChecklistPhotoInput = {
@@ -324,6 +325,23 @@ export const checklistController = {
       return res.json(checklist);
     } catch (error) {
       return res.status(500).json({ error: "Erro ao buscar checklist" });
+    }
+  },
+
+  async remove(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const deleted = await deleteChecklistById(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Checklist não encontrado" });
+      }
+      return res.json({ message: "Checklist excluído com sucesso" });
+    } catch (error) {
+      logger.error("Erro ao excluir checklist", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return res.status(500).json({ error: "Erro ao excluir checklist" });
     }
   },
 

@@ -1,20 +1,15 @@
-import { useState } from "react";
-import LogoSvg, { type LogoSvgVariant } from "./LogoSvg";
-
-export type LogoVariant = LogoSvgVariant;
-
 interface LogoProps {
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
-  /** `onDark` = fundo laranja/escuro (SVG sem caixa branca) */
-  variant?: LogoVariant;
+  /** Fundo laranja: logo PNG em cartão branco (marca oficial) */
+  variant?: "default" | "onDark";
 }
 
-const sizeConfig = {
-  sm: { img: "h-10", svg: 40 },
-  md: { img: "h-14", svg: 56 },
-  lg: { img: "h-20 sm:h-24", svg: 80 },
-  xl: { img: "h-28", svg: 96 },
+const sizeClasses = {
+  sm: "h-10",
+  md: "h-14",
+  lg: "h-20 sm:h-24",
+  xl: "h-28",
 } as const;
 
 export default function Logo({
@@ -22,16 +17,15 @@ export default function Logo({
   size = "md",
   variant = "default",
 }: LogoProps) {
-  const cfg = sizeConfig[size];
-  const [imgFailed, setImgFailed] = useState(false);
+  const imgClass = `${sizeClasses[size]} w-auto max-w-full object-contain`;
 
-  if (variant === "onDark" || imgFailed) {
+  if (variant === "onDark") {
     return (
-      <LogoSvg
-        variant={variant === "onDark" ? "onDark" : "default"}
-        height={cfg.svg}
-        className={`w-auto shrink-0 ${className}`}
-      />
+      <div
+        className={`inline-flex rounded-2xl bg-white px-5 py-3.5 shadow-elevated ${className}`}
+      >
+        <img src="/logo.png" alt="GS Transportes" className={imgClass} />
+      </div>
     );
   }
 
@@ -39,8 +33,7 @@ export default function Logo({
     <img
       src="/logo.png"
       alt="GS Transportes"
-      className={`${cfg.img} w-auto max-w-full object-contain ${className}`}
-      onError={() => setImgFailed(true)}
+      className={`${imgClass} ${className}`}
     />
   );
 }

@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, FileText } from "lucide-react";
-import ImageWithFallback, { type ImageLoadFailure } from "@/components/common/ImageWithFallback";
+import React, { useMemo, useState } from "react";
+import { FileText, Trash2 } from "lucide-react";
+import ImageWithFallback from "@/components/common/ImageWithFallback";
 import api, { checklistService, getApiErrorMessage } from "@/services/api";
 import { getPrivateMediaApiPath } from "@/lib/mediaUrls";
 import {
@@ -20,6 +20,7 @@ interface ChecklistDetailsModalProps {
   onClose: () => void;
   getImageUrl: (path: string | null | undefined) => string;
   onReviewed?: () => void | Promise<void>;
+  onDeleted?: () => void | Promise<void>;
 }
 
 const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
@@ -28,19 +29,11 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
   onClose,
   getImageUrl,
   onReviewed,
+  onDeleted,
 }) => {
   const [reviewSubmitting, setReviewSubmitting] = useState<false | "APROVADO" | "REJEITADO">(false);
+  const [deleting, setDeleting] = useState(false);
   const [reviewNotes, setReviewNotes] = useState("");
-  const [missingOnServer, setMissingOnServer] = useState(0);
-
-  const handleImageFailure = (reason: ImageLoadFailure) => {
-    if (reason === "missing") {
-      setMissingOnServer((n) => n + 1);
-    }
-  };
-  useEffect(() => {
-    setMissingOnServer(0);
-  }, [checklist?.id]);
 
   const sortedPhotos = useMemo(() => {
     if (!checklist?.photos?.length) return [] as ChecklistPhoto[];
@@ -95,6 +88,26 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
   const legacyPneuSemPosicao = sortedPhotos.filter(
     (p) => p.category === "PNEU" && !p.tirePosition,
   );
+
+  const handleDelete = async () => {
+    const plate = checklist.truck?.plate ?? "veículo";
+    const ok = window.confirm(
+      `Excluir o checklist da placa ${plate}? Esta ação não pode ser desfeita.`,
+    );
+    if (!ok) return;
+
+    setDeleting(true);
+    try {
+      await checklistService.remove(checklist.id);
+      toast.success("Checklist excluído.");
+      await onDeleted?.();
+      onClose();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao excluir checklist."));
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const openImageInNewTab = async (storedPath: string | null | undefined) => {
     try {
@@ -242,24 +255,6 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
         </div>
 
         <h3 className="font-bold text-lg mb-4 border-b pb-2">Fotos e Observações</h3>
-        {missingOnServer > 0 ? (
-          <div className="mb-4 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-            <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
-            <div>
-              <p className="font-semibold">
-                {missingOnServer === 1
-                  ? "1 foto não está mais no servidor"
-                  : `${missingOnServer} fotos não estão mais no servidor`}
-              </p>
-              <p className="mt-1 text-amber-900/90 text-xs leading-relaxed">
-                O checklist foi salvo no banco, mas os arquivos sumiram do disco — comum após
-                redeploy sem volume em <code className="text-[11px]">UPLOAD_PATH</code> ou sem backup
-                da pasta <code className="text-[11px]">uploads</code>. Novos checklists precisam de
-                volume persistente no Coolify.
-              </p>
-            </div>
-          </div>
-        ) : null}
         <div className="space-y-4">
           {checklist.notes && (
             <div className="bg-gray-50 p-4 rounded-lg">
@@ -279,7 +274,6 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
                     src={getImageUrl(cabinUrl)}
                     alt="Cabine"
                     className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                    onFailure={handleImageFailure}
                     onClick={() => void openImageInNewTab(cabinUrl)}
                   />
                 </div>
@@ -293,7 +287,6 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
                     src={getImageUrl(lonaUrl)}
                     alt="Lona"
                     className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                    onFailure={handleImageFailure}
                     onClick={() => void openImageInNewTab(lonaUrl)}
                   />
                 </div>
@@ -307,7 +300,6 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
                     src={getImageUrl(checklist.tiresPhotoUrl)}
                     alt="Pneus"
                     className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                    onFailure={handleImageFailure}
                     onClick={() => void openImageInNewTab(checklist.tiresPhotoUrl)}
                   />
                 </div>
@@ -333,7 +325,6 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
                         src={getImageUrl(photo.photoUrl)}
                         alt={photo.tirePosition || "pneu"}
                         className="w-full h-full object-cover cursor-pointer"
-                        onFailure={handleImageFailure}
                         onClick={() => void openImageInNewTab(photo.photoUrl)}
                       />
                     </div>
@@ -364,7 +355,6 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
                         src={getImageUrl(photo.photoUrl)}
                         alt="Eixo"
                         className="w-full h-full object-cover cursor-pointer"
-                        onFailure={handleImageFailure}
                         onClick={() => void openImageInNewTab(photo.photoUrl)}
                       />
                     </div>
@@ -386,7 +376,6 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
                         src={getImageUrl(photo.photoUrl)}
                         alt="Pneu"
                         className="w-full h-full object-cover cursor-pointer"
-                        onFailure={handleImageFailure}
                         onClick={() => void openImageInNewTab(photo.photoUrl)}
                       />
                     </div>
@@ -397,10 +386,20 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
           )}
         </div>
 
-        <div className="mt-8 flex justify-end">
+        <div className="mt-8 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 pt-4 border-t border-gray-100">
           <button
+            type="button"
+            onClick={() => void handleDelete()}
+            disabled={deleting || !!reviewSubmitting}
+            className="btn-danger-ghost justify-center sm:justify-start disabled:opacity-50"
+          >
+            <Trash2 className="w-4 h-4" />
+            {deleting ? "Excluindo…" : "Excluir checklist"}
+          </button>
+          <button
+            type="button"
             onClick={onClose}
-            className="px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors"
+            className="btn-secondary sm:ml-auto"
           >
             Fechar
           </button>
