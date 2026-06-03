@@ -208,8 +208,9 @@ export const truckService = {
 
 export const checklistService = {
   uploadPhotos: async (formData: FormData) => {
+    // Não definir Content-Type manualmente — o browser precisa incluir o boundary do multipart
     const response = await api.post("/checklists/upload-photos", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: { "Content-Type": undefined },
     });
     return response.data as { message: string; photoUrls: Record<string, string> };
   },
@@ -252,7 +253,7 @@ export const checklistService = {
 export const occurrenceService = {
   uploadPhotos: async (formData: FormData) => {
     const response = await api.post("/occurrences/upload-photos", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: { "Content-Type": undefined },
     });
     return response.data as { message: string; photoUrls: string[] };
   },
