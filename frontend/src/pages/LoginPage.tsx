@@ -26,9 +26,10 @@ const LoginPage: React.FC = () => {
   return (
     <div className="min-h-screen flex">
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-gs-orange-500 via-gs-orange-600 to-gs-orange-900">
-        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_30%_20%,white_0%,transparent_50%)]" />
-        <div className="relative z-10 flex flex-col justify-between p-12 text-white">
-          <Logo variant="onDark" size="lg" className="drop-shadow-sm" />
+        <div className="absolute inset-0 opacity-25 bg-[radial-gradient(ellipse_80%_60%_at_20%_0%,white_0%,transparent_55%)]" />
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-white/5 blur-3xl" />
+        <div className="relative z-10 flex flex-col justify-between p-12 text-white animate-fade-in">
+          <Logo variant="onDark" size="xl" />
           <div className="max-w-md">
             <h1 className="text-3xl font-bold tracking-tight leading-tight">
               Gestão de frota inteligente
