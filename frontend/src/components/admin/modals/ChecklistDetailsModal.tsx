@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from "react";
-import { FileText } from "lucide-react";
-import ImageWithFallback from "@/components/common/ImageWithFallback";
+import React, { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, FileText } from "lucide-react";
+import ImageWithFallback, { type ImageLoadFailure } from "@/components/common/ImageWithFallback";
 import api, { checklistService, getApiErrorMessage } from "@/services/api";
+import { getPrivateMediaApiPath } from "@/lib/mediaUrls";
 import {
   CHECKLIST_REVIEW_LABELS,
   getTirePositionLabel,
@@ -30,6 +31,17 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
 }) => {
   const [reviewSubmitting, setReviewSubmitting] = useState<false | "APROVADO" | "REJEITADO">(false);
   const [reviewNotes, setReviewNotes] = useState("");
+  const [missingOnServer, setMissingOnServer] = useState(0);
+
+  const handleImageFailure = (reason: ImageLoadFailure) => {
+    if (reason === "missing") {
+      setMissingOnServer((n) => n + 1);
+    }
+  };
+  useEffect(() => {
+    setMissingOnServer(0);
+  }, [checklist?.id]);
+
   const sortedPhotos = useMemo(() => {
     if (!checklist?.photos?.length) return [] as ChecklistPhoto[];
     const vt = checklist.truck?.vehicleType as VehicleType | undefined;
@@ -84,21 +96,16 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
     (p) => p.category === "PNEU" && !p.tirePosition,
   );
 
-  const openImageInNewTab = async (url: string) => {
+  const openImageInNewTab = async (storedPath: string | null | undefined) => {
     try {
-      if (!url) return;
-
-      if (url.includes("/api/files/")) {
-        const response = await api.get(url, { responseType: "blob" });
-        const objectUrl = URL.createObjectURL(response.data);
-        window.open(objectUrl, "_blank");
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-        return;
-      }
-
-      window.open(url, "_blank");
+      const apiPath = getPrivateMediaApiPath(storedPath);
+      if (!apiPath) return;
+      const response = await api.get(apiPath, { responseType: "blob" });
+      const objectUrl = URL.createObjectURL(response.data);
+      window.open(objectUrl, "_blank");
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
     } catch {
-      // noop
+      toast.error("Não foi possível abrir a imagem.");
     }
   };
 
@@ -235,6 +242,24 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
         </div>
 
         <h3 className="font-bold text-lg mb-4 border-b pb-2">Fotos e Observações</h3>
+        {missingOnServer > 0 ? (
+          <div className="mb-4 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+            <div>
+              <p className="font-semibold">
+                {missingOnServer === 1
+                  ? "1 foto não está mais no servidor"
+                  : `${missingOnServer} fotos não estão mais no servidor`}
+              </p>
+              <p className="mt-1 text-amber-900/90 text-xs leading-relaxed">
+                O checklist foi salvo no banco, mas os arquivos sumiram do disco — comum após
+                redeploy sem volume em <code className="text-[11px]">UPLOAD_PATH</code> ou sem backup
+                da pasta <code className="text-[11px]">uploads</code>. Novos checklists precisam de
+                volume persistente no Coolify.
+              </p>
+            </div>
+          </div>
+        ) : null}
         <div className="space-y-4">
           {checklist.notes && (
             <div className="bg-gray-50 p-4 rounded-lg">
@@ -254,7 +279,8 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
                     src={getImageUrl(cabinUrl)}
                     alt="Cabine"
                     className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                    onClick={() => void openImageInNewTab(getImageUrl(cabinUrl))}
+                    onFailure={handleImageFailure}
+                    onClick={() => void openImageInNewTab(cabinUrl)}
                   />
                 </div>
               </div>
@@ -267,7 +293,8 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
                     src={getImageUrl(lonaUrl)}
                     alt="Lona"
                     className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                    onClick={() => void openImageInNewTab(getImageUrl(lonaUrl))}
+                    onFailure={handleImageFailure}
+                    onClick={() => void openImageInNewTab(lonaUrl)}
                   />
                 </div>
               </div>
@@ -280,7 +307,8 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
                     src={getImageUrl(checklist.tiresPhotoUrl)}
                     alt="Pneus"
                     className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                    onClick={() => void openImageInNewTab(getImageUrl(checklist.tiresPhotoUrl))}
+                    onFailure={handleImageFailure}
+                    onClick={() => void openImageInNewTab(checklist.tiresPhotoUrl)}
                   />
                 </div>
               </div>
@@ -305,7 +333,8 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
                         src={getImageUrl(photo.photoUrl)}
                         alt={photo.tirePosition || "pneu"}
                         className="w-full h-full object-cover cursor-pointer"
-                        onClick={() => void openImageInNewTab(getImageUrl(photo.photoUrl))}
+                        onFailure={handleImageFailure}
+                        onClick={() => void openImageInNewTab(photo.photoUrl)}
                       />
                     </div>
                   </div>
@@ -335,7 +364,8 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
                         src={getImageUrl(photo.photoUrl)}
                         alt="Eixo"
                         className="w-full h-full object-cover cursor-pointer"
-                        onClick={() => void openImageInNewTab(getImageUrl(photo.photoUrl))}
+                        onFailure={handleImageFailure}
+                        onClick={() => void openImageInNewTab(photo.photoUrl)}
                       />
                     </div>
                   </div>
@@ -356,7 +386,8 @@ const ChecklistDetailsModal: React.FC<ChecklistDetailsModalProps> = ({
                         src={getImageUrl(photo.photoUrl)}
                         alt="Pneu"
                         className="w-full h-full object-cover cursor-pointer"
-                        onClick={() => void openImageInNewTab(getImageUrl(photo.photoUrl))}
+                        onFailure={handleImageFailure}
+                        onClick={() => void openImageInNewTab(photo.photoUrl)}
                       />
                     </div>
                   </div>

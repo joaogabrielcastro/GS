@@ -1,36 +1,59 @@
-import { ASSETS_BASE_URL } from "@/config/env";
+import { API_URL } from "@/config/env";
 
-/** Resolve URL de foto (legado + /api/files/ + uploads antigos). */
-export function getPrivateMediaUrl(path: string | null | undefined): string {
+/** Extrai nome do arquivo a partir de qualquer URL gravada no banco. */
+export function extractMediaFilename(
+  path: string | null | undefined,
+): string | null {
+  if (!path?.trim()) return null;
+  const normalized = path.replace(/\\/g, "/").trim();
+  const m = normalized.match(
+    /(?:api\/files|uploads)\/(?:checklist|occurrences|tires)\/([^/?#]+)$/i,
+  );
+  if (m?.[1]) return m[1];
+  const legacy = normalized.match(/\/(checklist|occurrences|tires)\/([^/?#]+)$/i);
+  if (legacy?.[2]) return legacy[2];
+  if (!normalized.includes("/") && /\.(jpe?g|png|webp)$/i.test(normalized)) {
+    return normalized;
+  }
+  const last = normalized.split("/").pop();
+  return last && /\.(jpe?g|png|webp)$/i.test(last) ? last : null;
+}
+
+function detectCategory(
+  path: string,
+): "checklist" | "occurrences" | "tires" | null {
+  const n = path.replace(/\\/g, "/").toLowerCase();
+  if (n.includes("occurrences")) return "occurrences";
+  if (n.includes("tires")) return "tires";
+  if (n.includes("checklist") || extractMediaFilename(path)) return "checklist";
+  return null;
+}
+
+/**
+ * Caminho relativo para axios (baseURL = API_URL).
+ * Ex.: /files/checklist/uuid.jpg
+ */
+export function getPrivateMediaApiPath(path: string | null | undefined): string {
   if (!path) return "";
   const normalized = path.replace(/\\/g, "/").trim();
+  const filename = extractMediaFilename(normalized);
+  if (!filename) return "";
 
-  if (normalized.startsWith("http")) return normalized;
+  const category =
+    detectCategory(normalized) ??
+    (normalized.includes("occurrences")
+      ? "occurrences"
+      : normalized.includes("tires")
+        ? "tires"
+        : "checklist");
 
-  const withLeadingSlash = normalized.startsWith("/")
-    ? normalized
-    : `/${normalized}`;
+  return `/files/${category}/${filename}`;
+}
 
-  if (withLeadingSlash.startsWith("/uploads/checklist/")) {
-    return `${ASSETS_BASE_URL}${withLeadingSlash.replace("/uploads/checklist/", "/api/files/checklist/")}`;
-  }
-  if (withLeadingSlash.startsWith("/uploads/occurrences/")) {
-    return `${ASSETS_BASE_URL}${withLeadingSlash.replace("/uploads/occurrences/", "/api/files/occurrences/")}`;
-  }
-  if (withLeadingSlash.startsWith("/api/files/")) {
-    return `${ASSETS_BASE_URL}${withLeadingSlash}`;
-  }
-
-  if (withLeadingSlash.startsWith("/checklist/")) {
-    return `${ASSETS_BASE_URL}${withLeadingSlash.replace("/checklist/", "/api/files/checklist/")}`;
-  }
-  if (withLeadingSlash.startsWith("/occurrences/")) {
-    return `${ASSETS_BASE_URL}${withLeadingSlash.replace("/occurrences/", "/api/files/occurrences/")}`;
-  }
-
-  if (!withLeadingSlash.includes("/")) {
-    return `${ASSETS_BASE_URL}/api/files/checklist/${withLeadingSlash.replace(/^\//, "")}`;
-  }
-
-  return `${ASSETS_BASE_URL}${withLeadingSlash}`;
+/** URL absoluta (abrir em nova aba). */
+export function getPrivateMediaUrl(path: string | null | undefined): string {
+  const apiPath = getPrivateMediaApiPath(path);
+  if (!apiPath) return "";
+  const base = API_URL.replace(/\/$/, "");
+  return `${base}${apiPath}`;
 }

@@ -31,28 +31,72 @@ npx prisma migrate resolve --applied 20260528120000_add_checklist_odometer
 npx prisma migrate deploy
 ```
 
-### 2. Uploads persistentes
+### 2. Fotos de checklist “sumiram” no dia seguinte
 
-Configure no backend:
+O checklist **fica no banco** (placa, observações, lista de fotos), mas a imagem só existe se o arquivo ainda estiver em `UPLOAD_PATH/checklist/`.
+
+**Causas mais comuns:**
+
+1. **Volume montado, mas `UPLOAD_PATH` diferente** — ex.: volume em `/data/uploads` e API gravando em `./uploads` (padrão).
+2. Redeploy sem volume (menos provável se você já configurou storage no Coolify).
+3. `UPLOAD_CLEANUP_ENABLED=true` apagando arquivos (desligue em produção).
+
+**Correção:**
+
+1. `UPLOAD_PATH` = mesmo caminho do **Destination Path** do volume (ex.: `/data/uploads`)
+2. `UPLOAD_CLEANUP_ENABLED=false`
+3. Verificar/copiar fotos de `./uploads/checklist` para o volume (ver seção 3)
+4. Backup da pasta `uploads` se existir
+
+Teste no servidor:
+
+```bash
+ls -la "$UPLOAD_PATH/checklist" | head
+```
+
+### 3. Volume persistente no Coolify (caminho tem que bater)
+
+No print do Coolify, o volume está em **Destination Path** `/data/uploads`.  
+A API só usa esse volume se a variável de ambiente for **exatamente o mesmo caminho**:
 
 ```env
-UPLOAD_PATH=/data/gs/uploads
+UPLOAD_PATH=/data/uploads
 UPLOAD_CLEANUP_ENABLED=false
 ALLOW_PUBLIC_REGISTER=false
 ```
 
-No Docker/Coolify, monte um **volume** em `/data/gs/uploads` (ou o path escolhido).
+| Configuração | Valor (exemplo seu) |
+|--------------|---------------------|
+| Coolify → Persistent Storage → **Destination Path** | `/data/uploads` |
+| Coolify → Environment → **UPLOAD_PATH** | `/data/uploads` |
 
-Estrutura esperada:
+Se o volume aponta para `/data/uploads` mas `UPLOAD_PATH` não está definido (ou é `./uploads`), as fotos vão para **outra pasta** dentro do container e **somem no redeploy** — o volume fica vazio e parece que “não funciona”.
+
+**Depois de corrigir:** Terminal do backend no Coolify:
+
+```bash
+echo "UPLOAD_PATH=$UPLOAD_PATH"
+ls -la /data/uploads/checklist | head
+ls -la ./uploads/checklist 2>/dev/null | head
+```
+
+- Se só `./uploads/checklist` tiver arquivos → fotos de ontem estão na pasta errada; copie para o volume:
+
+```bash
+mkdir -p /data/uploads/checklist
+cp -a ./uploads/checklist/. /data/uploads/checklist/ 2>/dev/null || true
+```
+
+Estrutura esperada no volume:
 
 ```
-uploads/
+/data/uploads/
   checklist/
   occurrences/
   tires/
 ```
 
-### 3. Variáveis frontend (build)
+### 4. Variáveis frontend (build)
 
 ```env
 VITE_API_URL=https://api.seudominio.com/api
@@ -60,11 +104,11 @@ VITE_SOCKET_URL=https://api.seudominio.com
 VITE_ALLOW_PUBLIC_REGISTER=false
 ```
 
-### 4. Healthcheck
+### 5. Healthcheck
 
 Após deploy: `GET https://api.seudominio.com/api/health` → `{ "status": "OK" }`
 
-### 5. Backup diário
+### 6. Backup diário
 
 Use `scripts/backup.sh` no cron do VPS (ajuste `DATABASE_URL` e paths).
 

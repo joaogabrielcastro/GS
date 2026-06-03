@@ -25,6 +25,7 @@ import { logger } from "./lib/logger";
 import { errorResponseNormalizer } from "./middleware/errorResponse";
 import { startRefreshTokenCleanupJob } from "./jobs/refreshTokenCleanup";
 import { startUploadCleanupJob } from "./jobs/uploadCleanup";
+import { logUploadPathDiagnostics } from "./lib/uploadPathDiagnostics";
 import { successResponseWrapper } from "./middleware/successResponse";
 import { attachSocketAuth } from "./lib/socketAuth";
 
@@ -176,6 +177,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 3000;
 
 httpServer.listen(PORT, () => {
+  logUploadPathDiagnostics();
   logger.info("Servidor iniciado", {
     port: PORT,
     apiUrl: `http://localhost:${PORT}/api`,

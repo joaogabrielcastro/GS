@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { Request, Response } from "express";
+import { buildStoredFileUrlCandidates } from "../lib/fileUrls";
 import { prisma } from "../lib/prisma";
 import { logger } from "../lib/logger";
 
@@ -14,10 +15,14 @@ const categoryToFolder: Record<string, string> = {
 
 async function canAccessChecklistFile(userId: string, role: string, filename: string) {
   if (role === "ADMINISTRADOR" || role === "FINANCEIRO") return true;
-  const suffix = `/checklist/${filename}`;
+  const safeFilename = path.basename(filename);
+  const urlCandidates = buildStoredFileUrlCandidates("checklist", safeFilename);
   const photo = await prisma.checklistPhoto.findFirst({
     where: {
-      photoUrl: { endsWith: suffix },
+      OR: [
+        { photoUrl: { in: urlCandidates } },
+        { photoUrl: { endsWith: safeFilename } },
+      ],
       checklist: { driverId: userId },
     },
     select: { id: true },
@@ -82,26 +87,34 @@ export const fileController = {
         return res.status(400).json({ error: "Caminho de arquivo inválido" });
       }
 
-      if (!fs.existsSync(target)) {
-        // Compatibilidade com bug antigo: uploads de ocorrência salvos na pasta checklist
+      const resolveExistingPath = (): string | null => {
+        if (fs.existsSync(target)) return target;
         if (category === "occurrences") {
           const legacyTarget = path.resolve(uploadRoot, "checklist", safeFilename);
-          if (fs.existsSync(legacyTarget)) {
-            return res.sendFile(legacyTarget);
-          }
+          if (fs.existsSync(legacyTarget)) return legacyTarget;
         }
+        return null;
+      };
+
+      const existingPath = resolveExistingPath();
+      if (!existingPath) {
         logger.warn("private_file_missing", {
           category,
           filename: safeFilename,
           expectedPath: target,
           uploadRoot,
           hint:
-            "Confirme volume persistente em UPLOAD_PATH e que os ficheiros existem no disco (redeploy apaga /app/uploads sem volume).",
+            "Arquivo ausente no disco. Redeploy sem volume em UPLOAD_PATH apaga fotos; use backup da pasta uploads.",
         });
-        return res.status(404).json({ error: "Arquivo não encontrado" });
+        return res.status(404).json({
+          error: "Arquivo não encontrado no servidor",
+          code: "FILE_MISSING_ON_DISK",
+          filename: safeFilename,
+        });
       }
 
-      return res.sendFile(target);
+      return res.sendFile(existingPath);
+
     } catch (error) {
       return res.status(500).json({ error: "Erro ao buscar arquivo" });
     }
