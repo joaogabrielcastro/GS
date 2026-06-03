@@ -1,6 +1,7 @@
 import React from "react";
 import { Plus, Search } from "lucide-react";
 import Pagination from "@/components/Pagination";
+import TableScroll from "@/components/common/TableScroll";
 import { TRUCK_STATUS_LABELS, VEHICLE_TYPE_LABELS, type Truck, type TruckStatus, type VehicleType } from "@/types";
 
 function formatPlate(value?: string) {
@@ -66,7 +67,7 @@ const TrucksTab: React.FC<TrucksTabProps> = ({
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
+        <TableScroll minWidth={960} className="px-1 pt-1 sm:px-0 sm:pt-0">
           <table className="w-full text-left">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -154,14 +155,14 @@ const TrucksTab: React.FC<TrucksTabProps> = ({
               )}
             </tbody>
           </table>
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            total={total}
-            limit={10}
-            onPageChange={onPageChange}
-          />
-        </div>
+        </TableScroll>
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          limit={10}
+          onPageChange={onPageChange}
+        />
       </div>
     </div>
   );

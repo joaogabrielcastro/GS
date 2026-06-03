@@ -3,6 +3,7 @@ import { Download, Eye, Search } from "lucide-react";
 import { checklistService } from "@/services/api";
 import toast from "react-hot-toast";
 import Pagination from "@/components/Pagination";
+import TableScroll from "@/components/common/TableScroll";
 import {
   CHECKLIST_REVIEW_LABELS,
   type ChecklistReviewStatus,
@@ -123,13 +124,9 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
           </div>
         </div>
       </div>
-      <p className="text-xs text-gray-500 mb-4 sm:hidden">
-        Deslize a tabela para o lado para ver todas as colunas.
-      </p>
-
       <div className="table-shell">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left">
+        <TableScroll minWidth={760} className="px-1 pt-1">
+          <table className="w-full text-left">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -209,7 +206,7 @@ const ChecklistsTab: React.FC<ChecklistsTabProps> = ({
               )}
             </tbody>
           </table>
-        </div>
+        </TableScroll>
         <Pagination
           page={page}
           totalPages={totalPages}

@@ -1,6 +1,7 @@
 import React from "react";
 import { Activity, Disc, FileText, Plus, Settings } from "lucide-react";
 import Pagination from "@/components/Pagination";
+import TableScroll from "@/components/common/TableScroll";
 import { getTirePositionLabel, TIRE_STATUS_LABELS, type Tire, type TireStatistics, type TireStatus } from "@/types";
 
 interface TiresTabProps {
@@ -84,6 +85,7 @@ const TiresTab: React.FC<TiresTabProps> = ({
       )}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <TableScroll minWidth={920} className="px-1 pt-1 sm:px-0 sm:pt-0">
         <table className="w-full text-left">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -164,6 +166,7 @@ const TiresTab: React.FC<TiresTabProps> = ({
             )}
           </tbody>
         </table>
+        </TableScroll>
         <Pagination page={page} totalPages={totalPages} total={total} limit={10} onPageChange={onPageChange} />
       </div>
     </div>

@@ -14,6 +14,7 @@ import {
   Truck,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import TableScroll from "@/components/common/TableScroll";
 
 const periodoLabel: Record<string, string> = {
   mes: "Este Mês",
@@ -210,7 +211,7 @@ const DashboardFinanceiro: React.FC = () => {
                   Veículos com Maior Custo
                 </h2>
               </div>
-              <div className="overflow-x-auto">
+              <TableScroll minWidth={640} className="px-1">
                 <table className="w-full text-left">
                   <thead className="bg-gray-50">
                     <tr>
@@ -266,7 +267,7 @@ const DashboardFinanceiro: React.FC = () => {
                     )}
                   </tbody>
                 </table>
-              </div>
+              </TableScroll>
             </div>
           </>
         ) : null}

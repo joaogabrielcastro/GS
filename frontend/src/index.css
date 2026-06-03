@@ -69,6 +69,21 @@
     @apply card overflow-hidden;
   }
 
+  .table-scroll-hint {
+    @apply text-xs text-gs-gray-500 mb-2 px-1 sm:hidden;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  .table-scroll > table {
+    width: 100%;
+    min-width: var(--table-min-w, 42rem);
+  }
+
   .table-head-row {
     @apply bg-gs-gray-50 border-b border-gs-gray-100;
   }

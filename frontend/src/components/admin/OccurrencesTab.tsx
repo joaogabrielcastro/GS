@@ -1,6 +1,7 @@
 import React from "react";
 import { Search } from "lucide-react";
 import Pagination from "@/components/Pagination";
+import TableScroll from "@/components/common/TableScroll";
 import { OCCURRENCE_STATUS_LABELS, type Occurrence, type OccurrenceStatus } from "@/types";
 
 interface OccurrencesTabProps {
@@ -49,6 +50,7 @@ const OccurrencesTab: React.FC<OccurrencesTabProps> = ({
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <TableScroll minWidth={800} className="px-1 pt-1 sm:px-0 sm:pt-0">
         <table className="w-full text-left">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -111,6 +113,7 @@ const OccurrencesTab: React.FC<OccurrencesTabProps> = ({
             )}
           </tbody>
         </table>
+        </TableScroll>
         <Pagination
           page={page}
           totalPages={totalPages}

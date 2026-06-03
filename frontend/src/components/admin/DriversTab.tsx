@@ -1,5 +1,6 @@
 import React from "react";
 import { Plus, Search } from "lucide-react";
+import TableScroll from "@/components/common/TableScroll";
 import type { User } from "@/types";
 
 interface DriversTabProps {
@@ -54,6 +55,7 @@ const DriversTab: React.FC<DriversTabProps> = ({
             Buscando…
           </p>
         )}
+        <TableScroll minWidth={880} className="px-1 pt-1">
         <table className={`w-full text-left ${loading ? "opacity-60" : ""}`}>
           <thead className="table-head-row">
             <tr>
@@ -130,6 +132,7 @@ const DriversTab: React.FC<DriversTabProps> = ({
             )}
           </tbody>
         </table>
+        </TableScroll>
       </div>
     </div>
   );

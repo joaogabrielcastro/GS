@@ -257,7 +257,7 @@ const AdminDashboardContainer: React.FC = () => {
 
       <AdminTabs activeTab={activeTab} onChange={setActiveTab} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-w-0 w-full">
         <header className="mb-6 pt-1 animate-fade-in">
           <h2 className="section-title">{tabMeta.title}</h2>
           {tabMeta.description ? (
