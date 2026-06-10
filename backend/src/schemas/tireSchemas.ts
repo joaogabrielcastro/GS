@@ -2,6 +2,11 @@ import { z } from "zod";
 
 const uuidSchema = z.string().uuid("ID inválido");
 
+const optionalPositiveInt = z.preprocess(
+  (val) => (val === "" || val === null || val === undefined ? undefined : val),
+  z.coerce.number().int().positive().optional(),
+);
+
 export const tireIdParamSchema = z.object({
   id: uuidSchema,
 });
@@ -14,7 +19,7 @@ export const createTireBodySchema = z.object({
   truckId: uuidSchema,
   cost: z.coerce.number().nonnegative(),
   initialKm: z.coerce.number().int().nonnegative(),
-  lifeExpectancyKm: z.coerce.number().int().positive().optional(),
+  lifeExpectancyKm: optionalPositiveInt,
   notes: z.string().max(2000).optional(),
 });
 
@@ -26,7 +31,7 @@ export const updateTireBodySchema = z.object({
     .enum(["NOVO", "BOM", "DESGASTADO", "RECAPADO", "SUBSTITUIDO", "DESCARTADO"])
     .optional(),
   currentKm: z.coerce.number().int().nonnegative().optional(),
-  lifeExpectancyKm: z.coerce.number().int().positive().optional(),
+  lifeExpectancyKm: optionalPositiveInt,
   notes: z.string().max(2000).optional(),
 });
 

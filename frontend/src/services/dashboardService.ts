@@ -45,6 +45,7 @@ export interface DriverStats {
     brand: string;
     vehicleType: string;
     spareCount?: number;
+    totalKm?: number;
     /** Pneus ativos no caminhão (para ex. marca no checklist). */
     tires?: { position: string; brand: string }[];
   } | null;

@@ -6,6 +6,7 @@ import { buildChecklistListWhere } from "../services/checklistQuery";
 import { reviewChecklist } from "../services/checklistReviewService";
 import { deleteChecklistById } from "../services/checklistDeleteService";
 import { exportChecklistsCsv } from "../services/checklistExportService";
+import { applyTruckOdometerFromChecklist } from "../services/checklistOdometerService";
 
 type ChecklistPhotoInput = {
   category: string;
@@ -92,43 +93,60 @@ export const checklistController = {
       const odometerParsed =
         odometer !== undefined && odometer !== null && String(odometer).trim() !== ""
           ? parseInt(String(odometer), 10)
-          : undefined;
-      const odometerKm =
-        odometerParsed !== undefined && !Number.isNaN(odometerParsed)
-          ? odometerParsed
-          : truck.totalKm ?? undefined;
+          : NaN;
 
-      const checklist = await prisma.dailyChecklist.create({
-        data: {
+      if (!Number.isFinite(odometerParsed) || odometerParsed < 0) {
+        return res.status(400).json({ error: "Informe o hodômetro do caminhão (km)" });
+      }
+
+      const odometerKm = odometerParsed;
+
+      const checklist = await prisma.$transaction(async (tx) => {
+        const odometerResult = await applyTruckOdometerFromChecklist(
+          tx,
           truckId,
-          driverId,
-          overallCondition,
-          tiresCondition,
-          cabinCondition,
-          canvasCondition,
-          notes,
-          location,
-          latitude: latitude ? parseFloat(latitude) : undefined,
-          longitude: longitude ? parseFloat(longitude) : undefined,
-          odometer: odometerKm,
-          reviewStatus: "PENDENTE",
-          photos:
-            photos.length > 0
-              ? {
-                  createMany: {
-                    data: photos.map((p) => ({
-                      category: p.category,
-                      axleNumber: p.axleNumber ? parseInt(String(p.axleNumber), 10) : null,
-                      side: p.side || null,
-                      tirePosition: p.tirePosition ? String(p.tirePosition).trim() : null,
-                      photoUrl: p.photoUrl,
-                      notes: p.notes || null,
-                    })),
-                  },
-                }
-              : undefined,
-        },
-        include: { photos: true },
+          odometerKm,
+        );
+        if (!odometerResult.ok) {
+          throw new Error(odometerResult.error);
+        }
+
+        return tx.dailyChecklist.create({
+          data: {
+            truckId,
+            driverId,
+            overallCondition,
+            tiresCondition,
+            cabinCondition,
+            canvasCondition,
+            notes,
+            location,
+            latitude: latitude ? parseFloat(latitude) : undefined,
+            longitude: longitude ? parseFloat(longitude) : undefined,
+            odometer: odometerKm,
+            reviewStatus: "PENDENTE",
+            photos:
+              photos.length > 0
+                ? {
+                    createMany: {
+                      data: photos.map((p) => ({
+                        category: p.category,
+                        axleNumber: p.axleNumber
+                          ? parseInt(String(p.axleNumber), 10)
+                          : null,
+                        side: p.side || null,
+                        tirePosition: p.tirePosition
+                          ? String(p.tirePosition).trim()
+                          : null,
+                        photoUrl: p.photoUrl,
+                        notes: p.notes || null,
+                      })),
+                    },
+                  }
+                : undefined,
+          },
+          include: { photos: true },
+        });
       });
 
       const hasIssues =
@@ -162,9 +180,13 @@ export const checklistController = {
         checklist,
       });
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("Hodômetro")) {
+        return res.status(400).json({ error: message });
+      }
       logger.error("Erro ao criar checklist", {
         requestId: req.requestId,
-        error: error instanceof Error ? error.message : String(error),
+        error: message,
       });
       return res.status(500).json({ error: "Erro ao criar checklist" });
     }

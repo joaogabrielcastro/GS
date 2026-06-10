@@ -36,7 +36,7 @@ export const createChecklistBodySchema = z.object({
   location: z.string().max(255).optional(),
   latitude: z.union([z.coerce.number(), z.string()]).optional(),
   longitude: z.union([z.coerce.number(), z.string()]).optional(),
-  odometer: z.coerce.number().int().nonnegative().optional(),
+  odometer: z.coerce.number().int().nonnegative(),
   checklistPhotos: z.union([z.string(), z.array(checklistPhotoSchema)]).optional(),
 });
 

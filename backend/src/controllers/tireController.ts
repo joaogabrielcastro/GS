@@ -47,7 +47,10 @@ export const tireController = {
           cost,
           initialKm,
           currentKm: initialKm,
-          lifeExpectancyKm,
+          lifeExpectancyKm:
+            lifeExpectancyKm != null && lifeExpectancyKm !== ""
+              ? Number(lifeExpectancyKm)
+              : null,
           notes,
         },
       });

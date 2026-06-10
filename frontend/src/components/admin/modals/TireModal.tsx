@@ -279,23 +279,37 @@ const TireModal: React.FC<TireModalProps> = ({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">KM Inicial *</label>
+                  <label className="text-sm font-medium text-gray-700">
+                    KM já rodados no pneu *
+                  </label>
                   <input
                     name="initialKm"
                     type="number"
-                    placeholder="0"
+                    min={0}
+                    step={1}
+                    placeholder="Ex: 45000"
                     className="w-full p-2 border rounded-lg mt-1"
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Para pneus já em uso, informe quantos km o pneu já rodou.
+                  </p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Vida útil (km)</label>
+                  <label className="text-sm font-medium text-gray-700">
+                    Vida útil (km) <span className="text-gray-400 font-normal">opcional</span>
+                  </label>
                   <input
                     name="lifeExpectancyKm"
                     type="number"
-                    placeholder="120000"
+                    min={1}
+                    step={1}
+                    placeholder="Ex: 120000"
                     className="w-full p-2 border rounded-lg mt-1"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Deixe em branco se ainda não souber a meta de km do pneu.
+                  </p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">

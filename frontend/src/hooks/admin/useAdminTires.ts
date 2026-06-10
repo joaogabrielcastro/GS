@@ -45,9 +45,17 @@ export function useAdminTires(active: boolean) {
       ),
     };
     if (payload.cost) payload.cost = parseFloat(payload.cost as string);
-    if (payload.initialKm) payload.initialKm = parseInt(payload.initialKm as string, 10);
-    if (payload.lifeExpectancyKm) {
-      payload.lifeExpectancyKm = parseInt(payload.lifeExpectancyKm as string, 10);
+    payload.initialKm = parseInt(String(payload.initialKm ?? "0"), 10);
+    const lifeRaw = String(payload.lifeExpectancyKm ?? "").trim();
+    if (lifeRaw) {
+      const life = parseInt(lifeRaw, 10);
+      if (!Number.isNaN(life) && life > 0) {
+        payload.lifeExpectancyKm = life;
+      } else {
+        delete payload.lifeExpectancyKm;
+      }
+    } else {
+      delete payload.lifeExpectancyKm;
     }
 
     await tireService.create(payload);

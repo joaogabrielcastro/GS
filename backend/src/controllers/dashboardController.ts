@@ -67,6 +67,7 @@ export const dashboardController = {
               brand: driverTruck.brand,
               vehicleType: driverTruck.vehicleType,
               spareCount: driverTruck.spareCount,
+              totalKm: driverTruck.totalKm,
               tires: driverTruck.tires.map((t) => ({
                 position: t.position,
                 brand: t.brand,

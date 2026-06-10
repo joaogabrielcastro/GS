@@ -126,9 +126,9 @@ const TiresTab: React.FC<TiresTabProps> = ({
                 <td className="px-6 py-4 text-sm text-gray-600">{tire.truck ? `${tire.truck.plate}` : "Estoque"}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">
                   {tire.currentKm?.toLocaleString()} km
-                  {tire.lifeExpectancyKm &&
-                    (() => {
-                      const used = tire.currentKm - (tire.initialKm ?? 0);
+                  {(() => {
+                    const used = tire.currentKm - (tire.initialKm ?? 0);
+                    if (tire.lifeExpectancyKm) {
                       const pct = Math.round((used / tire.lifeExpectancyKm) * 100);
                       if (pct >= 90) {
                         return (
@@ -145,7 +145,16 @@ const TiresTab: React.FC<TiresTabProps> = ({
                         );
                       }
                       return null;
-                    })()}
+                    }
+                    if (used > 0) {
+                      return (
+                        <span className="ml-2 text-xs text-gray-500">
+                          (+{used.toLocaleString("pt-BR")} km)
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
                 </td>
                 <td className="px-6 py-4 text-sm">
                   <button

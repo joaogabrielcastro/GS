@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { checklistService } from "@/services/api";
+import { checklistService, getApiErrorMessage } from "@/services/api";
 import { dashboardService } from "@/services/dashboardService";
 import {
   VEHICLE_TYPE_LABELS,
@@ -13,7 +13,14 @@ import {
   type VehicleType,
 } from "@/types";
 import toast from "react-hot-toast";
-import { Camera, CheckCircle, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Camera,
+  CheckCircle,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  Gauge,
+} from "lucide-react";
 import MobilePageHeader from "@/components/layout/MobilePageHeader";
 
 const WIZARD_STEPS = ["Condições", "Fotos gerais", "Pneus", "Revisar"] as const;
@@ -82,6 +89,7 @@ const ChecklistPage: React.FC = () => {
   const [cabinCondition, setCabinCondition] = useState("BOM");
   const [canvasCondition, setCanvasCondition] = useState("BOM");
   const [notes, setNotes] = useState("");
+  const [odometer, setOdometer] = useState("");
 
   const [photoFiles, setPhotoFiles] = useState<Record<string, File>>({});
   const [photoPreviews, setPhotoPreviews] = useState<Record<string, string>>(
@@ -108,11 +116,16 @@ const ChecklistPage: React.FC = () => {
           navigate("/motorista");
           return;
         }
-        setTruck({
+        const loadedTruck = {
           ...stats.truck,
           vehicleType: stats.truck.vehicleType as VehicleType,
           spareCount: stats.truck.spareCount ?? 1,
-        } as Truck);
+          totalKm: stats.truck.totalKm ?? 0,
+        } as Truck;
+        setTruck(loadedTruck);
+        if (loadedTruck.totalKm > 0) {
+          setOdometer(String(loadedTruck.totalKm));
+        }
       } catch {
         toast.error("Erro ao verificar caminhão.");
       }
@@ -172,8 +185,15 @@ const ChecklistPage: React.FC = () => {
     tireSlots.every((code) => !!photoFiles[`tire_${code}`]) &&
     estepeSlots.every((code) => !!photoFiles[`tire_${code}`]);
 
+  const odometerKm = useMemo(() => {
+    const n = parseInt(odometer.replace(/\D/g, ""), 10);
+    return Number.isFinite(n) ? n : NaN;
+  }, [odometer]);
+
+  const odometerValid = odometer.trim() !== "" && Number.isFinite(odometerKm) && odometerKm >= 0;
+
   const canGoNext = () => {
-    if (step === 0) return true;
+    if (step === 0) return odometerValid;
     if (step === 1) return generalPhotosComplete;
     if (step === 2) return tirePhotosComplete;
     return allPhotosComplete;
@@ -182,6 +202,16 @@ const ChecklistPage: React.FC = () => {
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!truck) return;
+    if (!odometerValid) {
+      toast.error("Informe o hodômetro do caminhão.");
+      return;
+    }
+    if (truck.totalKm > 0 && odometerKm < truck.totalKm) {
+      toast.error(
+        `O hodômetro não pode ser menor que ${truck.totalKm.toLocaleString("pt-BR")} km.`,
+      );
+      return;
+    }
     setLoading(true);
     try {
       const formData = new FormData();
@@ -226,15 +256,14 @@ const ChecklistPage: React.FC = () => {
         cabinCondition,
         canvasCondition,
         notes,
-        odometer: truck.totalKm ?? 0,
+        odometer: odometerKm,
         checklistPhotos: JSON.stringify(checklistPhotos),
       });
 
       toast.success("Checklist enviado com sucesso!");
       navigate("/motorista");
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { error?: string } } };
-      toast.error(err.response?.data?.error || "Erro ao enviar checklist.");
+      toast.error(getApiErrorMessage(error, "Erro ao enviar checklist."));
     } finally {
       setLoading(false);
     }
@@ -327,6 +356,36 @@ const ChecklistPage: React.FC = () => {
           <h2 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide">
             Condições Gerais
           </h2>
+          <div className="mb-4 pb-4 border-b border-gray-100">
+            <label htmlFor="odometer" className="block text-xs font-medium text-gray-600 mb-1.5">
+              Hodômetro do caminhão (km) *
+            </label>
+            <div className="relative">
+              <Gauge className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+              <input
+                id="odometer"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                step={1}
+                required
+                value={odometer}
+                onChange={(e) => setOdometer(e.target.value)}
+                placeholder="Ex: 185420"
+                className="w-full pl-11 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+              />
+            </div>
+            {(truck?.totalKm ?? 0) > 0 ? (
+              <p className="text-xs text-gray-500 mt-1.5">
+                Último registrado:{" "}
+                <strong>{(truck?.totalKm ?? 0).toLocaleString("pt-BR")} km</strong>
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500 mt-1.5">
+                Primeira leitura: informe o KM atual do painel do caminhão.
+              </p>
+            )}
+          </div>
           <div className="space-y-3">
             {[
               {
@@ -531,6 +590,10 @@ const ChecklistPage: React.FC = () => {
               Revisar antes de enviar
             </h2>
             <ul className="text-sm text-gray-700 space-y-2">
+              <li>
+                <span className="text-gray-500">Hodômetro:</span>{" "}
+                {odometerValid ? `${odometerKm.toLocaleString("pt-BR")} km` : "—"}
+              </li>
               <li>
                 <span className="text-gray-500">Pneus:</span> {tiresCondition}
               </li>
