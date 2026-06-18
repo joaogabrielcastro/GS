@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 import { prisma } from "../lib/prisma";
 import { buildPrivateFileUrl } from "../lib/storage";
 import { logger } from "../lib/logger";
+import { deleteOccurrenceById } from "../services/occurrenceDeleteService";
 
 // Variável de módulo para evitar perda de contexto do 'this'
 let socketIO: Server | null = null;
@@ -317,6 +318,23 @@ export const occurrenceController = {
         error: error instanceof Error ? error.message : String(error),
       });
       res.status(500).json({ error: "Erro ao atualizar ocorrência" });
+    }
+  },
+
+  async remove(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const deleted = await deleteOccurrenceById(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Ocorrência não encontrada" });
+      }
+      return res.json({ message: "Ocorrência excluída com sucesso" });
+    } catch (error) {
+      logger.error("Erro ao excluir ocorrência", {
+        requestId: req.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return res.status(500).json({ error: "Erro ao excluir ocorrência" });
     }
   },
 

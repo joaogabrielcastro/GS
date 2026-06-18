@@ -574,6 +574,19 @@ const AdminDashboardContainer: React.FC = () => {
         occurrence={occurrences.selectedOccurrence}
         onClose={() => occurrences.setIsOccurrenceModalOpen(false)}
         onUpdate={occurrences.updateOccurrenceStatus}
+        onDeleted={async () => {
+          occurrences.setIsOccurrenceModalOpen(false);
+          occurrences.setSelectedOccurrence(null);
+          await occurrences.reload();
+          if (activeTab === "visao-geral") {
+            try {
+              const data = await dashboardService.getAdminStats();
+              setStats(data);
+            } catch {
+              toast.error("Erro ao atualizar visão geral.");
+            }
+          }
+        }}
       />
 
       <ChecklistDetailsModal

@@ -1,14 +1,17 @@
-import React from "react";
+import React, { useState } from "react";
+import { Trash2 } from "lucide-react";
 import { ASSETS_BASE_URL } from "@/config/env";
 import ImageWithFallback from "@/components/common/ImageWithFallback";
-import api from "@/services/api";
+import api, { getApiErrorMessage, occurrenceService } from "@/services/api";
 import type { Occurrence, OccurrenceStatus } from "@/types";
+import toast from "react-hot-toast";
 
 interface OccurrenceDetailsModalProps {
   isOpen: boolean;
   occurrence: Occurrence | null;
   onClose: () => void;
   onUpdate: (status: string, cost?: number, notes?: string) => Promise<void>;
+  onDeleted?: () => void | Promise<void>;
 }
 
 const OccurrenceDetailsModal: React.FC<OccurrenceDetailsModalProps> = ({
@@ -16,7 +19,10 @@ const OccurrenceDetailsModal: React.FC<OccurrenceDetailsModalProps> = ({
   occurrence,
   onClose,
   onUpdate,
+  onDeleted,
 }) => {
+  const [deleting, setDeleting] = useState(false);
+
   if (!isOpen || !occurrence) return null;
 
   const normalizePhotoUrl = (url: string) => {
@@ -50,8 +56,28 @@ const OccurrenceDetailsModal: React.FC<OccurrenceDetailsModalProps> = ({
     }
   };
 
+  const handleDelete = async () => {
+    const plate = occurrence.truck?.plate ?? "veículo";
+    const ok = window.confirm(
+      `Excluir a ocorrência da placa ${plate}? Esta ação não pode ser desfeita.`,
+    );
+    if (!ok) return;
+
+    setDeleting(true);
+    try {
+      await occurrenceService.remove(occurrence.id);
+      toast.success("Ocorrência excluída.");
+      await onDeleted?.();
+      onClose();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao excluir ocorrência."));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
       <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-fade-in">
         <h2 className="text-xl font-bold mb-4">Detalhes da Ocorrência</h2>
         <div className="grid grid-cols-2 gap-4 mb-6">
@@ -158,29 +184,41 @@ const OccurrenceDetailsModal: React.FC<OccurrenceDetailsModalProps> = ({
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end gap-2">
+        <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 pt-4 border-t border-gray-100">
           <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+            type="button"
+            onClick={() => void handleDelete()}
+            disabled={deleting}
+            className="btn-danger-ghost justify-center sm:justify-start disabled:opacity-50"
           >
-            Fechar
+            <Trash2 className="w-4 h-4" />
+            {deleting ? "Excluindo…" : "Excluir ocorrência"}
           </button>
-          <button
-            onClick={() => {
-              const status = (
-                document.getElementById("status-select") as HTMLSelectElement
-              ).value;
-              const cost = (document.getElementById("cost-input") as HTMLInputElement)
-                .value;
-              const notes = (
-                document.getElementById("notes-input") as HTMLTextAreaElement
-              ).value;
-              void onUpdate(status, cost ? parseFloat(cost) : undefined, notes);
-            }}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-          >
-            Atualizar
-          </button>
+          <div className="flex justify-end gap-2 sm:ml-auto">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+            >
+              Fechar
+            </button>
+            <button
+              onClick={() => {
+                const status = (
+                  document.getElementById("status-select") as HTMLSelectElement
+                ).value;
+                const cost = (document.getElementById("cost-input") as HTMLInputElement)
+                  .value;
+                const notes = (
+                  document.getElementById("notes-input") as HTMLTextAreaElement
+                ).value;
+                void onUpdate(status, cost ? parseFloat(cost) : undefined, notes);
+              }}
+              disabled={deleting}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+            >
+              Atualizar
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -34,4 +34,11 @@ router.put(
   occurrenceController.updateStatus
 );
 
+router.delete(
+  '/:id',
+  authorize('ADMINISTRADOR'),
+  validate({ params: occurrenceIdParamSchema }),
+  occurrenceController.remove,
+);
+
 export default router;

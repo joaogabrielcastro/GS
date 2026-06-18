@@ -297,6 +297,10 @@ export const occurrenceService = {
     const response = await api.put(`/occurrences/${id}/status`, data);
     return response.data;
   },
+  remove: async (id: string) => {
+    const response = await api.delete(`/occurrences/${id}`);
+    return response.data;
+  },
 };
 
 export const tireService = {
